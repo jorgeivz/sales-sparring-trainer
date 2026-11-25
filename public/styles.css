@@ -288,3 +288,18 @@ footer { margin-top: var(--s8); font-size: 13px; color: var(--ink-3); }
   .dark { padding: var(--s5); }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* ---------- prospects ---------- */
+.prospect { align-content: start; }
+.fields-row { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; }
+.mini { font-size: 14px; font-weight: 500; color: var(--ink-2); min-width: 84px; }
+.lead .toggle { flex-wrap: wrap; }
+.kl.found { opacity: 1; }
+.spoiler { border-top: 1px dashed var(--line); padding-top: var(--s3); }
+.spoiler summary { font-size: 14px; font-weight: 600; }
+.hid { display: grid; gap: 2px; padding: var(--s3) 0; border-bottom: 1px solid var(--line); font-size: 15px; line-height: 1.5; }
+.hid:last-child { border-bottom: 0; }
+.hid b { font-weight: 600; }
+.hid small { color: var(--ink-3); font-size: 13px; }
+.rebuild { display: grid; gap: var(--s3); padding: var(--s4); border-radius: 10px; background: var(--paper); }
+.rebuild .btn { justify-self: start; }

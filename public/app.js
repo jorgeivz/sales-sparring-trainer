@@ -56,10 +56,11 @@ async function route() {
     const ws = await api('GET', `/api/w/${id}`);
     remember(id);
     if (!page) return go(`#/w/${id}/${!ws.business ? 'business' : !ws.script?.locked ? 'script' : 'bootcamp'}`);
-    steps(ws, page === 'day' || page === 'result' ? 'bootcamp' : page);
+    steps(ws, page === 'day' || page === 'result' || page === 'prospects' ? 'bootcamp' : page);
     if (page === 'business') return business(ws);
     if (page === 'script') return script(ws);
     if (page === 'bootcamp') return bootcamp(ws);
+    if (page === 'prospects') return prospects(ws);
     if (page === 'day') return dayPage(ws, Number(arg));
     if (page === 'result') return pastResult(ws, arg);
     go(`#/w/${id}`);
@@ -240,11 +241,11 @@ function scriptEdit(w) {
   };
   const lock = document.getElementById('lock');
   if (lock) lock.onclick = async () => {
-    busy('Locking your script: picking the key lines and building the prospect you will call… about 15 seconds.');
+    busy('Locking your script: picking the key lines and building the two prospects you will call… about 30 seconds.');
     try {
       await saveIfDirty();
       await api('POST', `/api/w/${w.id}/lock`);
-      go(`#/w/${w.id}/bootcamp`);
+      go(`#/w/${w.id}/prospects`);
     } catch (x) { busy(''); document.getElementById('err').textContent = x.message; }
   };
 }
@@ -338,8 +339,85 @@ function scriptLocked(w) {
       <a class="btn" href="#/w/${w.id}/bootcamp">Go to the bootcamp</a>
       <button class="btn ghost" id="unlock">Unlock to improve it</button>
     </div>
-    <p class="note">Unlocking keeps your progress. Lock it again to get new key lines.</p>`);
+    <p class="note">Unlocking keeps your progress. Locking again picks new key lines and builds new prospects from the new script.</p>`);
   document.getElementById('unlock').onclick = async () => { await api('POST', `/api/w/${w.id}/unlock`); route(); };
+}
+
+// ---------------------------------------------------------------- 3a. the prospects
+const dayProspect = (w, d) => (d.prospect === 'final' && w.persona_final ? w.persona_final : w.persona);
+const toggle = (name, options, on) => `<div class="toggle" role="group" data-name="${name}">${Object.entries(options).map(([k, label]) =>
+  `<button type="button" class="yes" data-v="${k}" aria-pressed="${k === on}">${esc(label)}</button>`).join('')}</div>`;
+const wireToggles = (root) => root.querySelectorAll('.toggle[data-name]').forEach((g) => g.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-v]');
+  if (!b) return;
+  g.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+}));
+const toggleValue = (root, name) => root.querySelector(`.toggle[data-name="${name}"] [aria-pressed="true"]`)?.dataset.v;
+
+async function prospects(w) {
+  const P = await api('GET', `/api/w/${w.id}/prospects`);
+  const shortLead = { cold: 'Cold call', inbound: 'Inbound lead', referral: 'Referral' };
+  const person = (which, p, days) => `
+    <form class="card fields prospect" data-which="${which}">
+      <div class="part-head" style="margin: 0"><span class="label" style="margin: 0">${days}</span>${which === 'final' ? '<span class="pill bad">harder</span>' : ''}</div>
+      <label>Name<input name="name" maxlength="40" value="${esc(p.name)}"></label>
+      <label>Who they are<input name="role" maxlength="120" value="${esc(p.role)}"></label>
+      <label>Their situation<small>What they would tell a stranger. What they hide is below, behind the spoiler.</small><textarea name="situation" maxlength="600" rows="4">${esc(p.situation)}</textarea></label>
+      <div class="fields-row"><span class="mini">Personality</span>${toggle('personality', which === 'final'
+        ? { rushed: P.personalities.rushed, skeptical: P.personalities.skeptical }
+        : { friendly: P.personalities.friendly, analytical: P.personalities.analytical, chatty: P.personalities.chatty }, p.personality)}</div>
+      <div class="fields-row"><span class="mini">Voice</span>${toggle('voice', { female: 'Female', male: 'Male' }, p.voice)}</div>
+      <div class="actions" style="margin-top: 0"><button class="btn small" data-act="save">Save changes</button><span class="saved note" style="margin: 0"></span></div>
+      <details class="fold spoiler"><summary>What ${esc(p.name.split(' ')[0])} is hiding <span class="muted">(spoils the practice)</span></summary>
+        ${p.pains?.length ? `<span class="label" style="margin-top: var(--s4)">Problems your pitch solves</span>${p.pains.map((x) => `<div class="hid"><b>${esc(x.pain)}</b><span class="serif-q">“${esc(x.says)}”</span>${x.solved_by ? `<small>Your pitch answers it with: “${esc(x.solved_by)}”</small>` : '<small>Your pitch does not clearly answer this one.</small>'}</div>`).join('')}` : ''}
+        ${Object.keys(p.hidden || {}).length ? `<span class="label" style="margin-top: var(--s4)">Facts they share only if you ask</span>${Object.entries(p.hidden).map(([k, v]) => `<div class="hid"><b>${esc(P.topics[k] || k)}</b><span>${esc(v)}</span></div>`).join('')}` : ''}
+        ${p.yes_if ? `<span class="label" style="margin-top: var(--s4)">What gets a yes</span><p style="margin: 0">${esc(p.yes_if)}</p>` : ''}
+        ${p.objections?.length ? `<span class="label" style="margin-top: var(--s4)">Objections they may hide (${which === 'final' ? 'days 6 and 7' : 'day 5'})</span>${p.objections.map((o) => `<div class="hid"><span class="serif-q">“${esc(o.says)}”</span><small>Really: ${esc(o.really)}</small></div>`).join('')}` : ''}
+      </details>
+      <div class="rebuild">
+        <label>Not like your real customers?<small>Say what to change, or leave it empty for someone new.</small><input name="steer" maxlength="400" placeholder="e.g. a landlord with three rentals, not a homeowner"></label>
+        <button class="btn small ghost" data-act="rebuild">Build a new ${which === 'final' ? 'final' : 'main'} prospect</button>
+      </div>
+      <p class="err" role="alert"></p>
+    </form>`;
+  render(`
+    <span class="label">Step 3 of 3 · Before day 1</span>
+    <h2>Meet the people you will call.</h2>
+    <p class="lede">Built from your script. Each one lives with the problems your pitch solves, and keeps a few facts to themselves until you ask the right question. Check they sound like your real customers, and change anything that does not.</p>
+    <div class="card lead">
+      <span class="label">Your script is written for</span>
+      ${toggle('lead', shortLead, P.lead?.type || 'inbound')}
+      ${P.lead?.context ? `<p class="note" style="margin-bottom: 0">${esc(P.lead.context)}</p>` : ''}
+    </div>
+    <div class="grid2 part">
+      ${person('main', P.main, 'Days 1 to 5 · your main prospect')}
+      ${P.final ? person('final', P.final, 'Days 6 and 7 · someone new') : ''}
+    </div>
+    <div class="actions"><a class="btn" href="#/w/${w.id}/bootcamp">Start the bootcamp</a><a class="btn ghost" href="#/w/${w.id}/script">See my locked script</a></div>`);
+  wireToggles(app);
+  app.querySelector('.lead .toggle').addEventListener('click', async (e) => {
+    const v = e.target.closest('button[data-v]')?.dataset.v;
+    if (v) await api('PUT', `/api/w/${w.id}/prospects/main`, { lead: v }).catch(() => {});
+  });
+  for (const form of app.querySelectorAll('form.prospect')) {
+    const which = form.dataset.which;
+    const err = form.querySelector('.err');
+    form.onsubmit = (e) => e.preventDefault();
+    form.querySelector('[data-act="save"]').onclick = async (e) => {
+      e.target.disabled = true; err.textContent = '';
+      try {
+        const f = new FormData(form);
+        await api('PUT', `/api/w/${w.id}/prospects/${which}`, { name: f.get('name'), role: f.get('role'), situation: f.get('situation'), personality: toggleValue(form, 'personality'), voice: toggleValue(form, 'voice') });
+        form.querySelector('.saved').textContent = 'Saved.';
+      } catch (x) { err.textContent = x.message; }
+      e.target.disabled = false;
+    };
+    form.querySelector('[data-act="rebuild"]').onclick = async (e) => {
+      for (const b of form.querySelectorAll('.btn')) b.disabled = true;
+      err.innerHTML = working('Building a new prospect from your script… about 15 seconds.');
+      try { await api('POST', `/api/w/${w.id}/prospects/${which}/rebuild`, { steer: new FormData(form).get('steer') }); route(); } catch (x) { err.textContent = x.message; for (const b of form.querySelectorAll('.btn')) b.disabled = false; }
+    };
+  }
 }
 
 // ---------------------------------------------------------------- 3. bootcamp
@@ -349,7 +427,7 @@ async function bootcamp(w) {
   render(`
     <span class="label">Step 3 of 3</span>
     <h2>Your 7-day bootcamp.</h2>
-    <p class="lede">You will be calling <b>${esc(w.persona?.name)}</b>, ${esc(w.persona?.role)}. One part of your script per day. Score ${w.pass_score} or more to unlock the next day.</p>
+    <p class="lede">You will be calling <b>${esc(w.persona?.name)}</b>, ${esc(w.persona?.role)}${w.persona_final ? `, and from day 6 someone you have not met: <b>${esc(w.persona_final.name)}</b>, ${esc(w.persona_final.role)}` : ''}. One part of your script per day. Score ${w.pass_score} or more to unlock the next day.</p>
     ${sketch('ladder')}
     ${w.demo ? '<div class="banner calm">Demo company: every day is open so you can jump ahead. The rounds below marked “sample” were played by our test rep.</div>' : ''}
     ${w.weak_spot ? `<div class="banner"><div><b>Your coach remembers.</b> Last time this objection tripped you up: <span class="serif-q">“${esc(w.weak_spot)}”</span>. It comes back first on your next call with hidden objections.</div></div>` : ''}
@@ -368,7 +446,7 @@ async function bootcamp(w) {
         <div class="n" style="font-size: 26px">D${a.day}</div>
         <div><b>${esc(meta.days.find((d) => d.n === a.day)?.title)}</b><small>${new Date(a.created).toLocaleString()} · ${a.passed ? 'passed' : 'not passed'}${a.sample ? ' · sample' : ''}</small></div>
         <div class="best">${a.score}</div></a>`).join('')}</div>` : ''}
-    <div class="actions"><a class="btn small ghost" href="#/w/${w.id}/script">See my locked script</a></div>`);
+    <div class="actions"><a class="btn small ghost" href="#/w/${w.id}/prospects">Meet the prospects</a><a class="btn small ghost" href="#/w/${w.id}/script">See my locked script</a></div>`);
 }
 
 // ---------------------------------------------------------------- day + call
@@ -376,6 +454,8 @@ function dayPage(w, n) {
   const d = w.days.find((x) => x.n === n);
   if (!d) return go(`#/w/${w.id}/bootcamp`);
   if (n > w.unlocked) return render(`<h2>Day ${n} is locked.</h2><p class="lede">Pass day ${n - 1} with ${w.pass_score} or more first.</p><a class="btn" href="#/w/${w.id}/day/${w.unlocked}">Go to day ${w.unlocked}</a>`);
+  const p = dayProspect(w, d);
+  const kind = p?.personality ? `${esc(p.personality[0].toUpperCase() + p.personality.slice(1))}, ` : '';
   render(`
     <span class="label">Day ${d.n} of 7 · ${esc(meta.aids[d.aid].name)}</span>
     <h2>${esc(d.title)}</h2>
@@ -386,13 +466,14 @@ function dayPage(w, n) {
       <div class="card">
         <span class="label">The call</span>
         <div class="facts">
-          <div><b>${esc(w.persona?.name)}</b>${esc(w.persona?.role)}</div>
-          <div><b>${meta.levels[d.level]}</b>prospect</div>
+          <div><b>${esc(p?.name)}</b>${esc(p?.role)}</div>
+          <div><b>${meta.levels[d.level]}</b>${kind.toLowerCase()}prospect</div>
           <div><b>${d.minutes} min</b>time limit</div>
           <div><b>${w.pass_score}+</b>to pass</div>
         </div>
         <p style="margin-bottom: 0">${esc(meta.aids[d.aid].explain)}</p>
-        ${d.objections ? `<p class="note">${esc(w.persona?.name)} is hiding ${d.objections} objection${d.objections > 1 ? 's' : ''}. Find ${d.objections > 1 ? 'them' : 'it'} with questions.</p>` : ''}
+        ${d.n === 6 && w.persona_final ? `<p class="note">New prospect today. You have never spoken to ${esc(p.name)}.</p>` : ''}
+        ${d.objections ? `<p class="note">${esc(p?.name)} is hiding ${d.objections} objection${d.objections > 1 ? 's' : ''}. Find ${d.objections > 1 ? 'them' : 'it'} with questions.</p>` : ''}
       </div>
     </div>
     <div class="actions">
@@ -574,9 +655,11 @@ function result(w, d, r) {
     </div>
     ${r.key_lines?.length ? `<div class="card part"><span class="label">Your key lines today</span>${r.key_lines.map((k) => `<div class="kl ${k.said ? 'said' : ''}"><span class="tick"></span><div>${esc(k.line)}</div></div>`).join('')}
       ${r.aids && (r.aids.reveals || r.aids.emergencies) ? `<p class="note">Screen help used: ${r.aids.reveals} hint reveal${r.aids.reveals === 1 ? '' : 's'}, ${r.aids.emergencies} emergency line${r.aids.emergencies === 1 ? '' : 's'}.</p>` : ''}</div>` : ''}
+    ${r.uncovered?.length ? `<div class="card part"><span class="label">What you uncovered: ${r.uncovered.filter((u) => u.found).length} of ${r.uncovered.length}</span>${r.uncovered.map((u) => `<div class="kl ${u.found ? 'said found' : ''}"><span class="tick"></span><div>${esc(u.label)}${u.quote ? `<q class="serif-q" style="display: block; font-size: 14px; color: var(--ink-2)">${esc(u.quote)}</q>` : ''}</div></div>`).join('')}
+      <p class="note">Everything ${esc(r.prospect?.name?.split(' ')[0] || 'the prospect')} only says when asked. The ones without a tick are still waiting for a question.</p></div>` : ''}
     ${r.drill ? `<div class="drill part"><span class="label">Next round, practice this</span>${esc(r.drill)}</div>` : ''}
     <details class="fold part"><summary>Full transcript</summary>
-      ${r.turns.map((t) => `<div class="turn ${t.role}"><span>${t.role === 'rep' ? 'You' : esc(w.persona?.name || 'Prospect')}</span><div>${esc(t.text)}</div></div>`).join('')}
+      ${r.turns.map((t) => `<div class="turn ${t.role}"><span>${t.role === 'rep' ? 'You' : esc(r.prospect?.name || dayProspect(w, d)?.name || 'Prospect')}</span><div>${esc(t.text)}</div></div>`).join('')}
     </details>
     ${nav}`);
 }

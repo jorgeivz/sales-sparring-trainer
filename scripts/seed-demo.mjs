@@ -20,6 +20,7 @@ const S = await import('../lib/script.mjs');
 const { grade } = await import('../lib/grade.mjs');
 const { day } = await import('../lib/bootcamp.mjs');
 const { pickObjections } = await import('../lib/prospect.mjs');
+const { prospectFor } = await import('../lib/persona.mjs');
 
 const business = S.cleanBusiness({
   company: 'Bright Roof Solar',
@@ -50,13 +51,15 @@ log(`review: ${before.score}/100, ${before.changes.length} edits`);
 const { script: improved, applied } = S.applyChanges(script, before.changes, before.changes.map((c) => c.id));
 log(`applied ${applied.length}`);
 const locked = await S.lock(business, improved, before.objections);
-log(`locked, persona ${locked.persona.name}`);
+log(`locked, prospects ${locked.persona.name} (${locked.persona.personality}) and ${locked.persona_final.name} (${locked.persona_final.personality}), lead ${locked.lead.type}`);
 
 const w = {
   business,
   script: locked.script,
   diagnosis: { ...before, applied, decided: true },
   persona: locked.persona,
+  persona_final: locked.persona_final,
+  lead: locked.lead,
   objections: locked.objections,
   attempts: [],
   weak_spot: null,
@@ -127,9 +130,10 @@ for (const [i, r] of rounds.entries()) {
   const d = day(r.d);
   const turns = r.turns.map(([role, text]) => ({ role, text }));
   const objections = pickObjections(w, d);
-  const res = await grade({ w, d, turns, objections, aids: {} });
+  const persona = prospectFor(w, d);
+  const res = await grade({ w, d, turns, objections, aids: {}, persona });
   const seconds = 40 + turns.length * 9;
-  w.attempts.push({ id: crypto.randomUUID(), day: d.n, sample: true, created: new Date(started + i * 20 * 3600000).toISOString(), objections, result: { ...res, day: d.n, seconds, turns } });
+  w.attempts.push({ id: crypto.randomUUID(), day: d.n, sample: true, created: new Date(started + i * 20 * 3600000).toISOString(), objections, persona, result: { ...res, day: d.n, seconds, turns } });
   log(`day ${d.n}: ${res.score} ${res.passed ? 'PASS' : 'fail'} (checklist ${res.breakdown.judged}, script ${res.breakdown.adherence}%)`);
 }
 

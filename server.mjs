@@ -16,6 +16,7 @@ const { DAYS, AIDS, LEVELS, PASS_SCORE, day } = await import('./lib/bootcamp.mjs
 const store = await import('./lib/store.mjs');
 const S = await import('./lib/script.mjs');
 const { buildProspect } = await import('./lib/prospect.mjs');
+const P = await import('./lib/persona.mjs');
 const { callToken, transcript } = await import('./lib/voice.mjs');
 const { grade } = await import('./lib/grade.mjs');
 const { mode, gatewayList } = await import('./lib/upstream.mjs');
@@ -118,6 +119,37 @@ const routes = [
     return store.publicView(w);
   }],
 
+  // The prospect card. This one includes what they hide: the page shows it behind a spoiler.
+  ['GET', /^\/api\/w\/([\w-]+)\/prospects$/, (_, [id]) => {
+    const w = mustW(id);
+    if (!w?.persona) return fail(400, 'Lock your script first: that is when your prospects are built.');
+    return {
+      lead: w.lead || null, main: w.persona, final: w.persona_final || null,
+      personalities: Object.fromEntries(Object.entries(P.PERSONALITIES).map(([k, v]) => [k, v.name])),
+      topics: P.TOPICS, leads: P.LEADS,
+    };
+  }],
+
+  ['PUT', /^\/api\/w\/([\w-]+)\/prospects\/(main|final)$/, (body, [id, which]) => {
+    const w = mustW(id);
+    const key = which === 'final' ? 'persona_final' : 'persona';
+    if (!w?.[key]) return fail(400, 'No prospect yet.');
+    w[key] = P.editProspect(w[key], body);
+    if (P.LEADS[body.lead]) w.lead = { ...(w.lead || {}), type: body.lead };
+    store.save(w);
+    return store.publicView(w);
+  }],
+
+  ['POST', /^\/api\/w\/([\w-]+)\/prospects\/(main|final)\/rebuild$/, async (body, [id, which]) => {
+    const w = mustW(id);
+    if (!w?.script?.locked) return fail(400, 'Lock your script first.');
+    const p = await P.rebuildProspect(w, which, String(body.steer || ''));
+    if (which === 'final') w.persona_final = p;
+    else { w.persona = p; w.objections = p.objections; w.weak_spot = null; }
+    store.save(w);
+    return store.publicView(w);
+  }],
+
   ['POST', /^\/api\/w\/([\w-]+)\/unlock$/, (_, [id]) => {
     const w = mustW(id);
     if (!w?.script) return fail(400, 'No script yet.');
@@ -137,14 +169,14 @@ const routes = [
     if (limited) return fail(429, limited);
     const p = buildProspect(w, d);
     const token = await callToken();
-    const attempt = { id: crypto.randomUUID(), day: d.n, created: new Date().toISOString(), conversation_id: null, objections: p.objections, result: null };
+    const attempt = { id: crypto.randomUUID(), day: d.n, created: new Date().toISOString(), conversation_id: null, objections: p.objections, persona: p.persona, result: null };
     w.attempts.push(attempt);
     store.save(w);
     const aid = d.aid === 'none' ? { level: 'none', parts: [] } : {
       level: d.aid,
       parts: d.parts.map((part) => ({ part, name: PART_NAMES[part], text: d.aid === 'script' ? w.script.parts[part].text : '', key_lines: w.script.parts[part].key_lines })),
     };
-    return { attempt: attempt.id, token, overrides: p.overrides, aid, prospect: { name: w.persona.name, role: w.persona.role }, minutes: d.minutes };
+    return { attempt: attempt.id, token, overrides: p.overrides, aid, prospect: { name: p.persona.name, role: p.persona.role }, minutes: d.minutes };
   }],
 
   ['POST', /^\/api\/w\/([\w-]+)\/result$/, async (body, [id]) => {
@@ -164,7 +196,7 @@ const routes = [
     if (t.seconds < MIN_SECONDS || t.turns.filter((x) => x.role === 'rep').length < 2) {
       a.result = { empty: true, seconds: t.seconds, turns: t.turns, day: a.day };
     } else {
-      const r = await grade({ w, d, turns: t.turns, objections: a.objections || [], aids: a.aids });
+      const r = await grade({ w, d, turns: t.turns, objections: a.objections || [], aids: a.aids, persona: a.persona || P.prospectFor(w, d) });
       a.result = { ...r, day: a.day, seconds: t.seconds, turns: t.turns };
       // The coach remembers: the objection you fumbled comes back first next time.
       if (r.objection_missed) w.weak_spot = r.objection_missed;
