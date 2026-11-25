@@ -1,32 +1,46 @@
 # Sales Sparring
 
-Practice a sales call against a voice prospect who sounds human, hides a real objection,
-and hangs up if you just pitch. When you hang up, you get scored on your exact words:
-every quote in the report is checked against the transcript, so the coach cannot make
-things up.
+A sales coach that **reviews your phone script line by line**, then **trains you on it for
+seven days** against a voice prospect who gets harder every day. Your script is on screen
+on day 1 and gone by day 7.
 
-Built for Fly.io Hacksgiving 2026. It is an agent that runs on a **Sprite** and reaches
-the outside world only through **Sprites connectors**:
+Built for Fly.io Hacksgiving 2026. It is an agent that runs on a **Sprite** and reaches the
+outside world only through **Sprites connectors**. No API key lives on the machine.
 
 | Connector  | What it does here |
 |------------|-------------------|
-| ElevenLabs | Mints a one-use token for the voice call, then reads the finished transcript |
-| OpenRouter | Scores the call against a 6-part rubric and writes the line to say instead |
+| OpenRouter | Drafts, splits and reviews your script against a 16-rule checklist; picks your key lines and invents your prospect; scores every call |
+| ElevenLabs | One-use token for each voice call, then the finished transcript |
 
-No API key lives on the Sprite. The browser talks to ElevenLabs over WebRTC with the
-one-use token; the Sprite never proxies audio.
+## What it does
 
-## How it works
+1. **Your business.** What you sell, who you call, the price.
+2. **Your script.** Paste yours (messy is fine) or get a first draft. The coach checks every
+   part (opener, discovery, pitch, close) against 16 rules and proposes concrete edits. You
+   accept or reject each one; the server applies exactly what you accepted, word for word.
+   Every quote the coach shows as evidence is checked against your script.
+3. **Lock it.** The coach picks your key lines, invents one realistic prospect, and lists the
+   objections that prospect will hide.
+4. **Seven calls.** One part of the script per day. The prospect gets harder (friendly, one
+   brush-off, vague on purpose, rushed and skeptical with two hidden objections). The screen
+   help is retired as you go: full script with lines that tick as you say them (days 1-3),
+   hints only (4-5), an emergency button (6), nothing (7). Score 70+ to unlock the next day.
+5. **A coach that remembers.** Progress lives on the Sprite's persistent disk. The objection
+   you fumbled comes back first on your next call, until you handle it.
 
-1. Pick a prospect (or write your own: what you sell, who picks up, their hidden objection)
-   and a difficulty: Warm, Skeptical or Brutal.
-2. The Sprite builds the prospect's persona and asks ElevenLabs, through the connector,
-   for a one-use call token. The persona travels as a per-call override.
-3. You talk. The call ends when you hang up, or after 5 minutes.
-4. The Sprite pulls the transcript, scores it through the OpenRouter connector, throws
-   away any quote the model invented, and stores the round on the Sprite disk.
-5. You get a score, the line that cost you most and what to say instead, and one drill
-   for the next round. Then go again, harder.
+### How a call is scored
+
+- **Checklist (80%)**: the day's checklist items, scored by the model, which must quote your
+  exact words. Quotes that are not in the transcript are thrown away.
+- **Script (20%)**: key lines said, computed on the server from the real transcript.
+- **Screen help**: minus 2 per hint revealed (max 10), minus 4 per emergency line (max 16).
+- **Graduation** also needs at least half your key lines, from memory.
+
+### Demo company
+
+"Explore the demo company" opens Bright Roof Solar with every day unlocked. It was built by
+running the real pipeline (`scripts/seed-demo.mjs`): a weak pasted script (6/100), every
+suggested edit accepted, locked, and four sample rounds scored by the real coach.
 
 ## Run it on a Sprite
 
@@ -37,7 +51,8 @@ sprite file push -r . /home/sprite/app
 # Fly dashboard → Sprites → Connectors: add ElevenLabs and OpenRouter, allow this Sprite
 sprite exec --dir /home/sprite/app -- node scripts/setup-agent.mjs   # prints ELEVENLABS_AGENT_ID
 sprite exec --dir /home/sprite/app -- sh -c 'echo ELEVENLABS_AGENT_ID=... > .env'
-sprite exec --dir /home/sprite/app -- node server.mjs                # port 8080
+sprite exec --dir /home/sprite/app -- node scripts/seed-demo.mjs        # optional demo company
+sprite exec -- sprite-env services create web --cmd node --args server.mjs --dir /home/sprite/app --http-port 8080
 sprite url update --auth public
 ```
 
