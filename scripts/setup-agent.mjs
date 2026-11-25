@@ -20,6 +20,7 @@ const { VOICES } = await import('../lib/prospect.mjs');
 const PLACEHOLDER = 'You are a placeholder. Say only: "The prospect was not loaded." Then stay silent.';
 
 const CONFIG = {
+  name: 'Sales Sparring Trainer - prospect',
   conversation_config: {
     agent: { language: 'en', first_message: 'Hello?', prompt: { prompt: PLACEHOLDER, llm: process.env.VOICE_LLM || 'gpt-6-luna' } },
     tts: { model_id: 'eleven_flash_v2', voice_id: VOICES.male },
@@ -52,7 +53,7 @@ for (const [name, id] of Object.entries(VOICES)) {
 
 let id = process.env.ELEVENLABS_AGENT_ID;
 if (!id) {
-  id = (await must('/v1/convai/agents/create', { method: 'POST', body: { name: 'Sales Sparring - prospect', ...CONFIG } })).agent_id;
+  id = (await must('/v1/convai/agents/create', { method: 'POST', body: CONFIG })).agent_id;
   console.log('created agent', id);
 }
 await must(`/v1/convai/agents/${id}`, { method: 'PATCH', body: CONFIG });

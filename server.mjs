@@ -1,4 +1,4 @@
-// Sales Sparring: build your sales script with a coach, then train it in a 7-day voice
+// Sales Sparring Trainer: build your sales script with a coach, then train it in a 7-day voice
 // bootcamp against prospects that get harder every day.
 // Runs on a Fly.io Sprite on port 8080. No dependencies: node server.mjs
 
@@ -216,7 +216,7 @@ http
     }
     send(res, 200, fs.readFileSync(file), TYPES[path.extname(file)] || 'application/octet-stream');
   })
-  .listen(PORT, () => console.log(`Sales Sparring on :${PORT} (${mode()} mode)`));
+  .listen(PORT, () => console.log(`Sales Sparring Trainer on :${PORT} (${mode()} mode)`));
 
 function send(res, status, body, type) {
   res.writeHead(status, { 'Content-Type': type, 'Cache-Control': 'no-store' });

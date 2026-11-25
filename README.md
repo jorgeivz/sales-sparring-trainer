@@ -1,4 +1,4 @@
-# Sales Sparring
+# Sales Sparring Trainer
 
 A sales coach that **reviews your phone script line by line**, then **trains you on it for
 seven days** against a voice prospect who gets harder every day. Your script is on screen
