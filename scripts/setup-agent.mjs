@@ -22,7 +22,7 @@ const PLACEHOLDER = 'You are a placeholder. Say only: "The prospect was not load
 const CONFIG = {
   conversation_config: {
     agent: { language: 'en', first_message: 'Hello?', prompt: { prompt: PLACEHOLDER, llm: process.env.VOICE_LLM || 'gpt-6-luna' } },
-    tts: { model_id: 'eleven_turbo_v2_5', voice_id: VOICES.male },
+    tts: { model_id: 'eleven_flash_v2', voice_id: VOICES.male },
     turn: { turn_model: 'turn_v3', turn_eagerness: 'patient', turn_timeout: 3.0 },
     conversation: { max_duration_seconds: 300 },
   },
