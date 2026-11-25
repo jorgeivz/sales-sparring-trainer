@@ -1,6 +1,11 @@
 // Loaded only when a call starts, so the rest of the app works even if the CDN is slow or blocked.
 const VOICE_SDK = 'https://cdn.jsdelivr.net/npm/@elevenlabs/client@1.37.1/+esm';
 import { linesSaid, hint } from '/lines.js';
+import { drawAll } from '/sketch.js';
+import { HOW, LADDER, FOUR_PARTS, LOOP, GAP, DAY } from '/diagrams.js';
+
+const SKETCHES = { how: HOW, ladder: LADDER, parts: FOUR_PARTS, loop: LOOP, gap: GAP, ...Object.fromEntries(Object.entries(DAY).map(([n, d]) => [`day-${n}`, d])) };
+const sketch = (name, caption) => `<figure class="sketch-card"><div data-sketch="${name}"></div>${caption ? `<figcaption>${caption}</figcaption>` : ''}</figure>`;
 
 const app = document.getElementById('app');
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -21,6 +26,7 @@ let call = null; // the live voice session, if any
 
 function render(html) {
   app.innerHTML = `<section class="view">${html}</section>`;
+  drawAll(app, SKETCHES);
   window.scrollTo({ top: 0 });
 }
 const working = (msg) => `<div class="working"><i></i><div>${msg}</div></div>`;
@@ -70,20 +76,54 @@ function home() {
   steps(null);
   const last = recall();
   render(`
-    <h1>Write the script.<br><em>Then earn it.</em></h1>
-    <p class="lede">A sales coach that reviews your phone script line by line, then trains you on it for seven days against a voice prospect who gets harder every day. Your script stays on screen at first and disappears by day seven.</p>
-    <div class="actions">
-      <button class="btn" id="new">Start with my business</button>
-      ${meta.demo_available ? '<button class="btn ghost" id="demo">Explore the demo company</button>' : ''}
-      ${last ? `<a class="btn small ghost" href="#/w/${esc(last)}">Continue where I left off</a>` : ''}
+    <div class="hero">
+      <div>
+        <h1>Write the script.<br><em>Then earn it.</em></h1>
+        <p class="lede">A sales coach that reviews your phone script line by line, then trains you on it for seven days against a voice prospect who gets harder every day. Your script stays on screen at first and disappears by day seven.</p>
+        <div class="actions">
+          <button class="btn" id="new">Start with my business</button>
+          ${meta.demo_available ? '<button class="btn ghost" id="demo">Explore the demo company</button>' : ''}
+          ${last ? `<a class="btn small ghost" href="#/w/${esc(last)}">Continue where I left off</a>` : ''}
+        </div>
+        <p class="err" id="err" role="alert"></p>
+      </div>
+      ${sketch('how')}
     </div>
-    <p class="err" id="err" role="alert"></p>
-    <div class="how">
-      <div><b>1 · Your business</b><span>What you sell, who you call, the price. Three minutes.</span></div>
-      <div><b>2 · Your script</b><span>Paste yours or get a first draft. A coach checks it against 16 rules and suggests edits you accept or reject.</span></div>
-      <div><b>3 · Seven calls</b><span>One part of the script per day, friendly prospects first, hidden objections later. Score ${meta.pass_score}+ to unlock the next day.</span></div>
-      <div><b>4 · A coach that remembers</b><span>The objection you fumbled comes back on your next call, until you handle it.</span></div>
+
+    <div class="feature">
+      <div>
+        <span class="label">The script</span>
+        <h2>Four parts. One of them decides the sale.</h2>
+        <p>Paste the script you use today, messy is fine, or get a first draft. The coach checks every part against 16 rules and proposes concrete edits. You accept or reject each one, and only what you accept goes in, word for word.</p>
+      </div>
+      ${sketch('parts')}
+    </div>
+
+    <div class="feature flip">
+      <div>
+        <span class="label">The bootcamp</span>
+        <h2>Seven calls. Harder every day. Less help every day.</h2>
+        <p>One part of your script per day. Friendly prospects first, vague answers on day 3, hidden objections from day 5. Your key lines tick on screen as you say them, then turn into hints, then a panic button, then nothing. Score ${meta.pass_score} or more to unlock the next day.</p>
+      </div>
+      ${sketch('ladder')}
+    </div>
+
+    <div class="feature">
+      <div>
+        <span class="label">The coach</span>
+        <h2>It remembers what beat you.</h2>
+        <p>Every call is scored on your exact words: the coach quotes what you said, shows the line that cost you most and what to say instead. The objection you fumbled comes back on your next call, until you handle it.</p>
+      </div>
+      ${sketch('loop')}
+    </div>
+
+    <div class="actions center-actions">
+      <button class="btn" id="new2">Start with my business</button>
+      ${meta.demo_available ? '<button class="btn ghost" id="demo2">Explore the demo company</button>' : ''}
     </div>`);
+  document.getElementById('new2').onclick = () => document.getElementById('new').click();
+  const demo2 = document.getElementById('demo2');
+  if (demo2) demo2.onclick = () => document.getElementById('demo').click();
   document.getElementById('new').onclick = async (e) => {
     e.target.disabled = true;
     try { go(`#/w/${(await api('POST', '/api/w')).id}/business`); } catch (x) { document.getElementById('err').textContent = x.message; e.target.disabled = false; }
@@ -135,7 +175,8 @@ function scriptSource(w) {
     <span class="label">Step 2 of 3</span>
     <h2>Start from your script, or from scratch.</h2>
     <p class="lede">Either way, the coach reviews it against 16 rules before you train on it.</p>
-    <div class="grid2">
+    ${sketch('parts', 'The coach splits your script into these four parts and checks each one.')}
+    <div class="grid2" style="margin-top: var(--s5)">
       <button class="choice" data-k="paste" aria-pressed="true"><b>I have a script</b><span>Paste it as it is, messy is fine. The coach splits it into opener, discovery, pitch and close without rewriting a word.</span></button>
       <button class="choice" data-k="draft" aria-pressed="false"><b>Write a first draft for me</b><span>The coach writes one for ${esc(w.business.company)} that follows every rule. You edit it before locking it.</span></button>
     </div>
@@ -242,6 +283,7 @@ function review(w) {
         <div class="part-head"><h3>${meta.part_names[p]}</h3><span class="pill ${cs.every((c) => c.pass) ? 'good' : 'bad'}">${cs.filter((c) => c.pass).length}/${cs.length}</span></div>
         <details class="fold"><summary>Show this part as written</summary><div class="script-text" style="margin-top: var(--s3)">${esc(w.script.parts[p].text) || '<span class="muted">(missing)</span>'}</div></details>
         <div class="checks">${cs.map((c) => `<div class="check ${c.pass ? 'pass' : 'fail'}"><span class="dot">${c.pass ? '✓' : '×'}</span><div>${esc(c.name)}${c.evidence ? `<q>${esc(c.evidence)}</q>` : ''}${c.note ? `<p>${esc(c.note)}</p>` : ''}</div></div>`).join('')}</div>
+        ${p === 'discovery' && !cs.every((c) => c.pass) ? sketch('gap', 'Discovery measures this gap. Without it, the pitch has nothing to hold on to.') : ''}
         ${ch.length ? `<div class="stack" style="margin-top: var(--s4)">${ch.map(changeCard).join('')}</div>` : ''}
       </div>`;
     }).join('')}
@@ -308,6 +350,7 @@ async function bootcamp(w) {
     <span class="label">Step 3 of 3</span>
     <h2>Your 7-day bootcamp.</h2>
     <p class="lede">You will be calling <b>${esc(w.persona?.name)}</b>, ${esc(w.persona?.role)}. One part of your script per day. Score ${w.pass_score} or more to unlock the next day.</p>
+    ${sketch('ladder')}
     ${w.demo ? '<div class="banner calm">Demo company: every day is open so you can jump ahead. The rounds below marked “sample” were played by our test rep.</div>' : ''}
     ${w.weak_spot ? `<div class="banner"><div><b>Your coach remembers.</b> Last time this objection tripped you up: <span class="serif-q">“${esc(w.weak_spot)}”</span>. It comes back first on your next call with hidden objections.</div></div>` : ''}
     <div class="ladder">
@@ -337,7 +380,8 @@ function dayPage(w, n) {
     <span class="label">Day ${d.n} of 7 · ${esc(meta.aids[d.aid].name)}</span>
     <h2>${esc(d.title)}</h2>
     <p class="lede">${esc(d.focus)}</p>
-    <div class="grid2">
+    <div class="day-sketch">${sketch(`day-${d.n}`)}</div>
+    <div class="grid2" style="margin-top: var(--s5)">
       <div class="card"><span class="label">Today's lesson</span><ol class="lesson">${d.lesson.map((l) => `<li>${esc(l)}</li>`).join('')}</ol></div>
       <div class="card">
         <span class="label">The call</span>
