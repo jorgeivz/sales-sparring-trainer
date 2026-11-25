@@ -78,7 +78,7 @@ function home() {
   render(`
     <div class="hero">
       <div>
-        <h1>Write or improve your sales script.<br><em>Then earn it.</em></h1>
+        <h1><span class="one-line">Write or improve your sales script.</span><br><em>Then earn it.</em></h1>
         <p class="lede">A sales coach that reviews your phone script line by line, then trains you on it for seven days against a voice prospect who gets harder every day. Your script stays on screen at first and disappears by day seven.</p>
         <div class="actions">
           <button class="btn" id="new">Start with my business</button>
