@@ -71,7 +71,8 @@ const routes = {
   'GET /api/health': async () => {
     if (mode() !== 'gateway') return { ok: true, mode: mode() };
     const g = await gatewayList().catch((e) => ({ status: 0, body: String(e) }));
-    const providers = [...g.body.matchAll(/"provider"\s*:\s*"([^"]+)"/g)].map((m) => m[1]);
+    let providers = [];
+    try { providers = (JSON.parse(g.body).connections || []).map((c) => c.provider); } catch { /* not json */ }
     return { ok: g.status === 200, mode: mode(), gateway_status: g.status, providers };
   },
 };
