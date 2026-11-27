@@ -344,6 +344,11 @@ function scriptLocked(w) {
 
 // Who the rep calls on a day. The server builds a new person per day; the rep never picks.
 const dayProspect = (w, d) => w.prospects?.[d.n] || null;
+const FREE_N = 8;
+// "filled out the form" -> "Filled out the form."
+const sentence = (t) => { const x = String(t).trim(); return x ? x[0].toUpperCase() + x.slice(1) + (/[.!?]$/.test(x) ? '' : '.') : ''; };
+const dayOf = (w, n) => (Number(n) === FREE_N ? w.free : w.days.find((x) => x.n === Number(n)));
+const dayTitle = (n) => (Number(n) === FREE_N ? 'Free practice' : meta.days.find((d) => d.n === Number(n))?.title);
 const kindName = (p) => (p?.personality ? p.personality[0].toUpperCase() + p.personality.slice(1) : '');
 
 // ---------------------------------------------------------------- 3. bootcamp
@@ -362,43 +367,53 @@ async function bootcamp(w) {
         const open = d.n <= w.unlocked;
         const cls = d.passed ? 'passed' : open ? 'open' : 'locked';
         const inner = `<div class="n">${d.n}</div>
-          <div><b>${esc(d.title)}</b><small>${esc(d.focus)}</small>${levelMeter(d.level)}<small>${dayProspect(w, d) ? `${esc(dayProspect(w, d).name)}, ${esc(kindName(dayProspect(w, d)).toLowerCase())} · ` : ''}${esc(meta.aids[d.aid].name)}${d.objections ? ` · ${d.objections} hidden objection${d.objections > 1 ? 's' : ''}` : ''}</small></div>
+          <div><b>${esc(d.title)}</b><small>${esc(d.focus)}</small>${levelMeter(d.level)}<small>${dayProspect(w, d) ? `${esc(dayProspect(w, d).name)}, ${esc(kindName(dayProspect(w, d)).toLowerCase())}` : `Someone new, ${esc(d.who.personality)}`} · ${esc(meta.aids[d.aid].name)}${d.objections ? ` · ${d.objections} hidden objection${d.objections > 1 ? 's' : ''}` : ''}</small></div>
           <div class="best">${d.best !== null ? `${d.best}<small>${d.passed ? 'passed' : 'best so far'}</small>` : open ? '<small>Ready</small>' : '<small>Locked</small>'}</div>`;
         return open ? `<a class="rung ${cls}" href="#/w/${w.id}/day/${d.n}">${inner}</a>` : `<div class="rung ${cls}">${inner}</div>`;
       }).join('')}
+      ${w.free ? (() => {
+        const f = w.free;
+        const inner = `<div class="n">∞</div>
+          <div><b>${esc(f.title)}</b><small>${esc(f.focus)}</small><small>${f.open ? 'A new person every call · any scenario · normal to hard' : 'Opens when you graduate'}</small></div>
+          <div class="best">${f.best !== null ? `${f.best}<small>best of ${f.tries}</small>` : f.open ? '<small>Ready</small>' : '<small>Locked</small>'}</div>`;
+        return f.open ? `<a class="rung open" href="#/w/${w.id}/day/${FREE_N}">${inner}</a>` : `<div class="rung locked">${inner}</div>`;
+      })() : ''}
     </div>
     ${attempts.length ? `<div style="margin-top: var(--s7)"><span class="label">Your rounds</span>
       ${attempts.slice(0, 8).map((a) => `<a class="rung" href="#/w/${w.id}/result/${a.id}" style="margin-top: var(--s2)">
-        <div class="n" style="font-size: 26px">D${a.day}</div>
-        <div><b>${esc(meta.days.find((d) => d.n === a.day)?.title)}</b><small>${new Date(a.created).toLocaleString()} · ${a.passed ? 'passed' : 'not passed'}${a.sample ? ' · sample' : ''}</small></div>
+        <div class="n" style="font-size: 26px">${a.day === FREE_N ? '∞' : `D${a.day}`}</div>
+        <div><b>${esc(dayTitle(a.day))}</b><small>${new Date(a.created).toLocaleString()} · ${a.passed ? 'passed' : 'not passed'}${a.sample ? ' · sample' : ''}</small></div>
         <div class="best">${a.score}</div></a>`).join('')}</div>` : ''}
     <div class="actions"><a class="btn small ghost" href="#/w/${w.id}/script">See my locked script</a></div>`);
 }
 
 // ---------------------------------------------------------------- day + call
 function dayPage(w, n) {
-  const d = w.days.find((x) => x.n === n);
+  const d = dayOf(w, n);
   if (!d) return go(`#/w/${w.id}/bootcamp`);
-  if (n > w.unlocked) return render(`<h2>Day ${n} is locked.</h2><p class="lede">Pass day ${n - 1} with ${w.pass_score} or more first.</p><a class="btn" href="#/w/${w.id}/day/${w.unlocked}">Go to day ${w.unlocked}</a>`);
-  const p = dayProspect(w, d);
+  const free = n === FREE_N;
+  if (free && !d.open) return render(`<h2>Free practice is locked.</h2><p class="lede">Pass day 7 (graduation) first.</p><a class="btn" href="#/w/${w.id}/bootcamp">Back to the bootcamp</a>`);
+  if (!free && n > w.unlocked) return render(`<h2>Day ${n} is locked.</h2><p class="lede">Pass day ${n - 1} with ${w.pass_score} or more first.</p><a class="btn" href="#/w/${w.id}/day/${w.unlocked}">Go to day ${w.unlocked}</a>`);
+  const p = free ? d.prospect : dayProspect(w, d);
+  const first = p?.name?.split(' ')[0];
   render(`
-    <span class="label">Day ${d.n} of 7 · ${esc(meta.aids[d.aid].name)}</span>
+    <span class="label">${free ? 'After graduation' : `Day ${d.n} of 7`} · ${esc(meta.aids[d.aid].name)}</span>
     <h2>${esc(d.title)}</h2>
     <p class="lede">${esc(d.focus)}</p>
-    <div class="day-sketch">${sketch(`day-${d.n}`)}</div>
+    <div class="day-sketch">${sketch(`day-${free ? 6 : d.n}`)}</div>
     <div class="grid2" style="margin-top: var(--s5)">
       <div class="card"><span class="label">Today's lesson</span><ol class="lesson">${d.lesson.map((l) => `<li>${esc(l)}</li>`).join('')}</ol></div>
       <div class="card">
         <span class="label">The call</span>
         <div class="facts">
-          <div><b>${esc(p?.name)}</b>${esc(p?.role)}</div>
-          <div><b>${esc(kindName(p))}</b>${meta.levels[d.level].toLowerCase()} level</div>
+          ${p ? `<div><b>${esc(p.name)}</b>${esc(p.role)}</div>` : '<div><b>Someone new</b>you see who when they pick up</div>'}
+          ${free ? '<div><b>?</b>you find out how hard on the call</div>' : `<div><b>${esc(p ? kindName(p) : kindName({ personality: d.who.personality }))}</b>${meta.levels[d.level].toLowerCase()} level</div>`}
           <div><b>${d.minutes} min</b>time limit</div>
-          <div><b>${w.pass_score}+</b>to pass</div>
+          <div><b>${w.pass_score}+</b>${free ? 'good score' : 'to pass'}</div>
         </div>
         <p style="margin-bottom: 0">${esc(meta.aids[d.aid].explain)}</p>
-        <p class="note">Someone new: you have never spoken to ${esc(p?.name?.split(' ')[0] || 'them')}.${w.lead?.context ? ` ${esc(w.lead.context)}` : ''} Everything else you find out with questions.</p>
-        ${d.objections ? `<p class="note">${esc(p?.name)} is hiding ${d.objections} objection${d.objections > 1 ? 's' : ''}. Find ${d.objections > 1 ? 'them' : 'it'} with questions.</p>` : ''}
+        <p class="note">Someone new: you have never spoken to ${esc(first || 'them')}.${w.lead?.context ? ` ${esc(sentence(w.lead.context))}` : ''} Everything else you find out with questions.</p>
+        ${free ? '<p class="note">They may hide up to two objections. Find them with questions.</p>' : d.objections ? `<p class="note">${esc(first || 'They')} ${first ? 'is' : 'are'} hiding ${d.objections} objection${d.objections > 1 ? 's' : ''}. Find ${d.objections > 1 ? 'them' : 'it'} with questions.</p>` : ''}
       </div>
     </div>
     <div class="actions">
@@ -418,7 +433,9 @@ async function startCall(w, d, btn) {
   try {
     const mic = await navigator.mediaDevices.getUserMedia({ audio: true });
     mic.getTracks().forEach((t) => t.stop());
+    if (!(d.n === FREE_N ? d.prospect : dayProspect(w, d))) err.innerHTML = working('Finding someone new to call… about 15 seconds.');
     s = await api('POST', `/api/w/${w.id}/call`, { day: d.n });
+    err.textContent = '';
   } catch (x) {
     err.textContent = x.name === 'NotAllowedError' ? 'Allow the microphone to start the call.' : x.message;
     btn.disabled = false;
@@ -441,7 +458,7 @@ async function startCall(w, d, btn) {
   };
 
   render(`
-    <span class="label">Day ${d.n} · ${esc(d.title)}</span>
+    <span class="label">${d.n === FREE_N ? 'Free practice' : `Day ${d.n} · ${esc(d.title)}`}</span>
     <div class="call-grid">
       <div class="ring">
         <div class="orb" id="orb"></div>
@@ -539,15 +556,16 @@ async function pastResult(w, attemptId) {
   const { attempts } = await api('GET', `/api/w/${w.id}/attempts`);
   const a = attempts.find((x) => x.id === attemptId);
   if (!a) return go(`#/w/${w.id}/bootcamp`);
-  result(w, w.days.find((d) => d.n === a.day), a);
+  result(w, dayOf(w, a.day), a);
 }
 
 function result(w, d, r) {
-  const next = w.days.find((x) => x.n === d.n + 1);
+  const free = d.n === FREE_N;
+  const next = free ? null : w.days.find((x) => x.n === d.n + 1);
   const nav = `<div class="actions">
       ${r.passed && next ? `<a class="btn" href="#/w/${w.id}/day/${next.n}">Go to day ${next.n}: ${esc(next.title)}</a>` : ''}
-      ${r.passed && !next ? `<a class="btn" href="#/w/${w.id}/bootcamp">You graduated. Back to the bootcamp</a>` : ''}
-      <a class="btn ${r.passed ? 'ghost' : ''}" href="#/w/${w.id}/day/${d.n}">${r.passed ? 'Play this day again' : 'Try this day again'}</a>
+      ${r.passed && !next && !free ? `<a class="btn" href="#/w/${w.id}/day/${FREE_N}">You graduated. Try free practice</a>` : ''}
+      <a class="btn ${r.passed && !free ? 'ghost' : ''}" href="#/w/${w.id}/day/${d.n}">${free ? 'Call someone new' : r.passed ? 'Play this day again (someone new)' : 'Try again with someone new'}</a>
       <a class="btn ghost" href="#/w/${w.id}/bootcamp">Bootcamp</a>
     </div>`;
   if (r.empty) {
@@ -556,21 +574,28 @@ function result(w, d, r) {
   const pips = (n) => `<div class="pips ${n === 2 ? 'full' : ''}"><i class="${n >= 1 ? 'on' : ''}"></i><i class="${n >= 2 ? 'on' : ''}"></i></div>`;
   const b = r.breakdown || {};
   render(`
-    <span class="label">Day ${d.n} · ${esc(d.title)}${r.sample ? ' · sample round' : ''}</span>
+    <span class="label">${free ? 'Free practice' : `Day ${d.n} · ${esc(d.title)}`}${r.sample ? ' · sample round' : ''}</span>
     <div class="dark score-card">
       <div class="big-num">${r.score}<small>/100</small></div>
       <div>
-        <span class="verdict ${r.passed ? 'won' : 'lost'}">${r.passed ? `Passed day ${d.n}` : `Need ${w.pass_score} to pass`}</span>
+        <span class="verdict ${r.passed ? 'won' : 'lost'}">${free ? (r.passed ? 'Strong call' : `Under ${w.pass_score}`) : r.passed ? `Passed day ${d.n}` : `Need ${w.pass_score} to pass`}</span>
         ${d.parts.some((p) => p === 'pitch' || p === 'close') ? `<span class="verdict plain">${r.closed ? 'Next step booked' : 'No next step'}</span>` : ''}
         <div class="stats">
           ${b.adherence !== null && b.adherence !== undefined ? `<div><b>${b.adherence}%</b>key lines said</div>` : ''}
-          <div><b>${r.talk_ratio}%</b>you talked</div>
+          <div><b>${r.talk_ratio}%</b>of the time you talked</div>
           <div><b>${r.questions}</b>questions</div>
           <div><b>${mmss(r.seconds)}</b>call length</div>
         </div>
-        <p class="note" style="color: #9C9184">Checklist ${b.judged}/100${b.adherence !== null && b.adherence !== undefined ? ` × 80% + script ${b.adherence}% × 20%` : ''}${b.aid_penalty ? ` − ${b.aid_penalty} for screen help` : ''}${d.aid === 'none' ? ' · graduation also needs 50% of key lines' : ''}</p>
+        <p class="note" style="color: #9C9184">Checklist ${b.judged}/100${b.adherence !== null && b.adherence !== undefined ? ` × 80% + script ${b.adherence}% × 20%` : ''}${b.aid_penalty ? ` − ${b.aid_penalty} for screen help` : ''}${b.capped ? ` · capped at ${w.pass_score - 1}: you kept talking after the closing question` : ''}${d.aid === 'none' ? ' · graduation also needs 50% of key lines' : ''}</p>
       </div>
     </div>
+    ${r.close_silence?.asked ? (r.close_silence.waited
+      ? `<div class="banner calm part"><div><b>You asked and stopped talking.</b> <span class="serif-q">“${esc(r.close_silence.question)}”</span> Then you let them answer. That pause closes more deals than any line.</div></div>`
+      : `<div class="card miss part"><span class="label">You asked for the next step, then kept talking</span>
+        <div class="said-q">“${esc(r.close_silence.question)}”</div>
+        <p style="margin: var(--s2) 0">Right after it: “${esc(r.close_silence.after)}”</p>
+        <div class="instead">Ask, then stay quiet until they answer. That is why this score stops at ${w.pass_score - 1}.</div></div>`) : ''}
+    ${r.talk_ratio > 60 ? `<p class="note part">You talked ${r.talk_ratio}% of the time. With a real prospect, aim for well under half: the one asking the questions leads the call.</p>` : ''}
     ${r.biggest_miss?.instead ? `<div class="card miss part"><span class="label">The line that cost you most</span>
       ${r.biggest_miss.quote ? `<div class="said-q">“${esc(r.biggest_miss.quote)}”</div>` : ''}
       <div class="instead">Say instead: “${esc(r.biggest_miss.instead)}”</div></div>` : ''}

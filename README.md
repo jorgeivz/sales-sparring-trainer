@@ -26,10 +26,19 @@ outside world only through **Sprites connectors**. No API key lives on the machi
 4. **Seven calls, seven people.** One part of the script per day, and each day a harder
    scenario: interested and open, distracted with a brush-off, vague on purpose, comparing a
    competitor, worried about money, rushed with two hidden objections, and a skeptic who was
-   burned before and does not decide alone. The screen
+   burned before and does not decide alone. Every prospect reacts to your technique live:
+   they warm up when you ask and listen, cool down when you pitch early, argue or rush, and
+   doubt anything that sounds too good to be true. Each one has their own voice, warmer
+   on the easy days and harder at the end. Retry a day and you call someone new, so you
+   cannot memorize the answers. The screen
    help is retired as you go: full script with lines that tick as you say them (days 1-3),
    hints only (4-5), an emergency button (6), nothing (7). Score 70+ to unlock the next day.
-5. **A coach that remembers.** Progress lives on the Sprite's persistent disk. The objection
+5. **Ask, then stop talking.** On the days you ask for a next step, the coach finds your
+   closing question in the transcript. Keep talking after it and the score stops at 69,
+   one under the pass mark. It also shows how much of the call you did the talking.
+6. **Free practice after graduation.** The whole call against a new person every time,
+   any scenario, any difficulty from normal to hard.
+7. **A coach that remembers.** Progress lives on the Sprite's persistent disk. The objection
    you fumbled comes back first on your next call, even with a new person, until you handle it.
 
 ### How a call is scored

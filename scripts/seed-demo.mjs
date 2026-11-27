@@ -18,9 +18,9 @@ if (fs.existsSync(envFile)) {
 }
 const S = await import('../lib/script.mjs');
 const { grade } = await import('../lib/grade.mjs');
-const { day } = await import('../lib/bootcamp.mjs');
+const { day, FREE, FREE_N, freeDraw } = await import('../lib/bootcamp.mjs');
 const { pickObjections } = await import('../lib/prospect.mjs');
-const { prospectFor } = await import('../lib/persona.mjs');
+const { prospectFor, buildFresh } = await import('../lib/persona.mjs');
 
 const business = S.cleanBusiness({
   company: 'Bright Roof Solar',
@@ -51,6 +51,7 @@ log(`review: ${before.score}/100, ${before.changes.length} edits`);
 const { script: improved, applied } = S.applyChanges(script, before.changes, before.changes.map((c) => c.id));
 log(`applied ${applied.length}`);
 const locked = await S.lock(business, improved, before.objections);
+log(`problems: ${locked.pitch_problems.join(' | ')}`);
 log(`locked, lead ${locked.lead.type}, prospects: ${Object.values(locked.prospects).map((p) => `d${p.day} ${p.name} (${p.personality})`).join(', ')}`);
 
 const w = {
@@ -58,6 +59,7 @@ const w = {
   script: locked.script,
   diagnosis: { ...before, applied, decided: true },
   prospects: locked.prospects,
+  pitch_problems: locked.pitch_problems,
   lead: locked.lead,
   objections: locked.objections,
   attempts: [],
@@ -135,6 +137,14 @@ for (const [i, r] of rounds.entries()) {
   w.attempts.push({ id: crypto.randomUUID(), day: d.n, sample: true, created: new Date(started + i * 20 * 3600000).toISOString(), objections, persona, result: { ...res, day: d.n, seconds, turns } });
   log(`day ${d.n}: ${res.score} ${res.passed ? 'PASS' : 'fail'} (checklist ${res.breakdown.judged}, script ${res.breakdown.adherence}%)`);
 }
+
+// The sample rounds used up those days' people: line up someone new for each, plus the
+// first free-practice person, so a visitor never waits for a build.
+const playedDays = [...new Set(rounds.map((r) => r.d))];
+const fresh = await Promise.all([...playedDays.map((n) => buildFresh(w, day(n))), buildFresh(w, FREE, freeDraw())]);
+playedDays.forEach((n, i) => { w.prospects[n] = fresh[i]; });
+w.prospects[FREE_N] = fresh[fresh.length - 1];
+log(`lined up: ${fresh.map((p) => `${p.name} (${p.personality}, level ${p.level})`).join(', ')}`);
 
 fs.mkdirSync(path.join(ROOT, 'data'), { recursive: true });
 fs.writeFileSync(path.join(ROOT, 'data', 'demo-template.json'), JSON.stringify(w, null, 2));

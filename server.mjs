@@ -12,7 +12,7 @@ const ROOT = path.dirname(fileURLToPath(import.meta.url));
 loadEnv(path.join(ROOT, '.env'));
 
 const { CHECKLIST, PARTS, PART_NAMES } = await import('./lib/checklist.mjs');
-const { DAYS, AIDS, LEVELS, PASS_SCORE, day } = await import('./lib/bootcamp.mjs');
+const { DAYS, AIDS, LEVELS, PASS_SCORE, day, FREE, FREE_N, freeDay, freeDraw } = await import('./lib/bootcamp.mjs');
 const store = await import('./lib/store.mjs');
 const S = await import('./lib/script.mjs');
 const { buildProspect } = await import('./lib/prospect.mjs');
@@ -28,6 +28,18 @@ const MIN_SECONDS = 20;
 
 const fail = (status, error) => [status, { error }];
 const mustW = (id) => store.load(id);
+
+/** Builds the next new person for a day in the background. Never fails a request. */
+async function prepareNext(id, n) {
+  try {
+    const w = store.load(id);
+    if (!w) return;
+    const p = await P.buildFresh(w, n === FREE_N ? FREE : day(n), n === FREE_N ? freeDraw() : null);
+    const now = store.load(id); // load and save with no await in between: nothing else lands
+    (now.prospects ||= {})[n] = p;
+    store.save(now);
+  } catch (x) { console.error('prepareNext', n, x.message); }
+}
 
 const routes = [
   ['GET', /^\/api\/meta$/, () => ({
@@ -130,14 +142,25 @@ const routes = [
   }],
 
   // A bootcamp call: token for the voice session plus what the rep may see on screen today.
+  // Every call is with someone the rep has not spoken to: a day played before gets a new
+  // person (same scenario and difficulty), and free practice draws a new one each time.
   ['POST', /^\/api\/w\/([\w-]+)\/call$/, async (body, [id]) => {
-    const w = mustW(id);
+    let w = mustW(id);
     if (!w?.script?.locked) return fail(400, 'Lock your script before the bootcamp.');
-    const d = day(body.day);
+    const free = Number(body.day) === FREE_N;
+    if (free && !store.graduated(w)) return fail(403, 'Free practice opens when you graduate (pass day 7).');
+    let d = free ? FREE : day(body.day);
     if (!d) return fail(400, 'No such day.');
-    if (d.n > store.unlockedDay(w)) return fail(403, `Pass day ${d.n - 1} first.`);
+    if (!free && d.n > store.unlockedDay(w)) return fail(403, `Pass day ${d.n - 1} first.`);
     const limited = store.allowCall(w.id);
     if (limited) return fail(429, limited);
+    const current = P.prospectFor(w, d);
+    if (!current || store.alreadyCalled(w, current)) {
+      const p = await P.buildFresh(w, d, free ? freeDraw() : null);
+      w = mustW(id); // reload: a background build may have saved meanwhile
+      (w.prospects ||= {})[d.n] = p;
+    }
+    if (free) d = freeDay(P.prospectFor(w, d));
     const p = buildProspect(w, d);
     const token = await callToken();
     const attempt = { id: crypto.randomUUID(), day: d.n, created: new Date().toISOString(), conversation_id: null, objections: p.objections, persona: p.persona, result: null };
@@ -163,7 +186,7 @@ const routes = [
     }
     const t = await transcript(a.conversation_id);
     if (!t) return [202, { pending: true }];
-    const d = day(a.day);
+    const d = a.day === FREE_N ? freeDay(a.persona) : day(a.day);
     if (t.seconds < MIN_SECONDS || t.turns.filter((x) => x.role === 'rep').length < 2) {
       a.result = { empty: true, seconds: t.seconds, turns: t.turns, day: a.day };
     } else {
@@ -177,6 +200,12 @@ const routes = [
       } else if (r.passed && d.objections) { w.weak_spot = null; w.weak_objection = null; }
     }
     store.save(w);
+    // Line up the next person while the rep reads the report, so "try again" (or the first
+    // free practice after graduating) starts with someone new without a wait.
+    if (!a.result.empty) {
+      prepareNext(w.id, d.n);
+      if (d.n === 7 && a.result.passed) prepareNext(w.id, FREE_N);
+    }
     return a.result;
   }],
 
