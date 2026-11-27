@@ -1,7 +1,7 @@
 # Sales Sparring Trainer
 
 A sales coach that **reviews your phone script line by line**, then **trains you on it for
-seven days** against a voice prospect who gets harder every day. Your script is on screen
+seven days** against a new voice prospect every day, each one harder than the last. Your script is on screen
 on day 1 and gone by day 7.
 
 Built for Fly.io Hacksgiving 2026. It is an agent that runs on a **Sprite** and reaches the
@@ -9,7 +9,7 @@ outside world only through **Sprites connectors**. No API key lives on the machi
 
 | Connector  | What it does here |
 |------------|-------------------|
-| OpenRouter | Drafts, splits and reviews your script against a 16-rule checklist; picks your key lines and invents your prospect; scores every call |
+| OpenRouter | Drafts, splits and reviews your script against a 16-rule checklist; picks your key lines and builds your seven prospects; scores every call |
 | ElevenLabs | One-use token for each voice call, then the finished transcript |
 
 ## What it does
@@ -19,14 +19,18 @@ outside world only through **Sprites connectors**. No API key lives on the machi
    part (opener, discovery, pitch, close) against 16 rules and proposes concrete edits. You
    accept or reject each one; the server applies exactly what you accepted, word for word.
    Every quote the coach shows as evidence is checked against your script.
-3. **Lock it.** The coach picks your key lines, invents one realistic prospect, and lists the
-   objections that prospect will hide.
-4. **Seven calls.** One part of the script per day. The prospect gets harder (friendly, one
-   brush-off, vague on purpose, rushed and skeptical with two hidden objections). The screen
+3. **Lock it.** The coach picks your key lines and builds seven prospects from your script,
+   one per day. Each one lives with problems your pitch solves, keeps facts to themselves
+   until you ask, and has their own objections. You never pick or edit who you call:
+   otherwise you would pick the easy one.
+4. **Seven calls, seven people.** One part of the script per day, and each day a harder
+   scenario: interested and open, distracted with a brush-off, vague on purpose, comparing a
+   competitor, worried about money, rushed with two hidden objections, and a skeptic who was
+   burned before and does not decide alone. The screen
    help is retired as you go: full script with lines that tick as you say them (days 1-3),
    hints only (4-5), an emergency button (6), nothing (7). Score 70+ to unlock the next day.
 5. **A coach that remembers.** Progress lives on the Sprite's persistent disk. The objection
-   you fumbled comes back first on your next call, until you handle it.
+   you fumbled comes back first on your next call, even with a new person, until you handle it.
 
 ### How a call is scored
 

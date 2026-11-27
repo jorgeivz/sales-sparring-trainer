@@ -51,14 +51,13 @@ log(`review: ${before.score}/100, ${before.changes.length} edits`);
 const { script: improved, applied } = S.applyChanges(script, before.changes, before.changes.map((c) => c.id));
 log(`applied ${applied.length}`);
 const locked = await S.lock(business, improved, before.objections);
-log(`locked, prospects ${locked.persona.name} (${locked.persona.personality}) and ${locked.persona_final.name} (${locked.persona_final.personality}), lead ${locked.lead.type}`);
+log(`locked, lead ${locked.lead.type}, prospects: ${Object.values(locked.prospects).map((p) => `d${p.day} ${p.name} (${p.personality})`).join(', ')}`);
 
 const w = {
   business,
   script: locked.script,
   diagnosis: { ...before, applied, decided: true },
-  persona: locked.persona,
-  persona_final: locked.persona_final,
+  prospects: locked.prospects,
   lead: locked.lead,
   objections: locked.objections,
   attempts: [],
@@ -66,7 +65,7 @@ const w = {
 };
 
 // Sample rounds, played by "our test rep". Transcripts are ours; the scores are the real coach's.
-const n = w.persona.name;
+const n = w.prospects[1].name.split(' ')[0];
 const lines = (p) => w.script.parts[p].key_lines;
 const rounds = [
   { d: 1, turns: [

@@ -114,38 +114,9 @@ const routes = [
     if (!w?.script) return fail(400, 'No script yet.');
     if (!PARTS.every((p) => w.script.parts[p].text.trim())) return fail(400, 'Every part needs some text before you lock it.');
     const r = await S.lock(w.business, w.script, w.diagnosis?.objections);
-    Object.assign(w, r);
-    store.save(w);
-    return store.publicView(w);
-  }],
-
-  // The prospect card. This one includes what they hide: the page shows it behind a spoiler.
-  ['GET', /^\/api\/w\/([\w-]+)\/prospects$/, (_, [id]) => {
-    const w = mustW(id);
-    if (!w?.persona) return fail(400, 'Lock your script first: that is when your prospects are built.');
-    return {
-      lead: w.lead || null, main: w.persona, final: w.persona_final || null,
-      personalities: Object.fromEntries(Object.entries(P.PERSONALITIES).map(([k, v]) => [k, v.name])),
-      topics: P.TOPICS, leads: P.LEADS,
-    };
-  }],
-
-  ['PUT', /^\/api\/w\/([\w-]+)\/prospects\/(main|final)$/, (body, [id, which]) => {
-    const w = mustW(id);
-    const key = which === 'final' ? 'persona_final' : 'persona';
-    if (!w?.[key]) return fail(400, 'No prospect yet.');
-    w[key] = P.editProspect(w[key], body);
-    if (P.LEADS[body.lead]) w.lead = { ...(w.lead || {}), type: body.lead };
-    store.save(w);
-    return store.publicView(w);
-  }],
-
-  ['POST', /^\/api\/w\/([\w-]+)\/prospects\/(main|final)\/rebuild$/, async (body, [id, which]) => {
-    const w = mustW(id);
-    if (!w?.script?.locked) return fail(400, 'Lock your script first.');
-    const p = await P.rebuildProspect(w, which, String(body.steer || ''));
-    if (which === 'final') w.persona_final = p;
-    else { w.persona = p; w.objections = p.objections; w.weak_spot = null; }
+    // New script, new people. The two-person fields are from before the daily ladder.
+    delete w.persona; delete w.persona_final;
+    Object.assign(w, r, { weak_spot: null, weak_objection: null });
     store.save(w);
     return store.publicView(w);
   }],
@@ -199,8 +170,11 @@ const routes = [
       const r = await grade({ w, d, turns: t.turns, objections: a.objections || [], aids: a.aids, persona: a.persona || P.prospectFor(w, d) });
       a.result = { ...r, day: a.day, seconds: t.seconds, turns: t.turns };
       // The coach remembers: the objection you fumbled comes back first next time.
-      if (r.objection_missed) w.weak_spot = r.objection_missed;
-      else if (r.passed && d.objections) w.weak_spot = null;
+      // Kept whole (what they say + the real reason) so tomorrow's new prospect can raise it too.
+      if (r.objection_missed) {
+        w.weak_spot = r.objection_missed;
+        w.weak_objection = (a.objections || []).find((o) => o.says === r.objection_missed) || { says: r.objection_missed, really: '' };
+      } else if (r.passed && d.objections) { w.weak_spot = null; w.weak_objection = null; }
     }
     store.save(w);
     return a.result;
