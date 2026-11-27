@@ -130,6 +130,7 @@ const routes = [
     delete w.persona; delete w.persona_final;
     Object.assign(w, r, { weak_spot: null, weak_objection: null });
     store.save(w);
+    if (store.graduated(w)) prepareNext(w.id, FREE_N);
     return store.publicView(w);
   }],
 
