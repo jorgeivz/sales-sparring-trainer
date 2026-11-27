@@ -446,15 +446,40 @@ async function startCall(w, d, btn) {
   const aids = { reveals: 0, emergencies: 0 };
   let said = '';
 
+  // The part's text with each key line wrapped so it can tick (key lines are copied verbatim
+  // from the text when the script is locked; one that is not found is simply not marked).
+  const marked = (text, keys, first) => {
+    const spots = keys.map((l, k) => ({ at: text.indexOf(l), l, i: first + k })).filter((x) => x.at >= 0).sort((a, b) => a.at - b.at);
+    let out = '', pos = 0;
+    for (const x of spots) {
+      if (x.at < pos) continue;
+      out += esc(text.slice(pos, x.at)) + `<mark class="kl" data-i="${x.i}">${esc(x.l)}</mark>`;
+      pos = x.at + x.l.length;
+    }
+    return out + esc(text.slice(pos));
+  };
+
   const aidPanel = () => {
     if (s.aid.level === 'none') return `<div class="memory"><div><b>From memory.</b>Nothing on screen today. You know this script.</div></div>`;
     if (s.aid.level === 'emergency') return `<span class="label">Under pressure</span>
       <p class="muted">Clean screen. If you freeze, the emergency button shows your next line. Every use costs points.</p>
       <button class="btn ink small" id="sos">Emergency: show my next line</button><div id="sos-line"></div>`;
     let i = -1;
-    return s.aid.parts.map((p) => `<span class="label" style="margin-top: var(--s4)">${esc(p.name)}</span>
-      ${s.aid.level === 'script' && p.text ? `<details class="fold"><summary>Full text of this part</summary><div class="script-text" style="margin: var(--s2) 0">${esc(p.text)}</div></details>` : ''}
-      ${p.key_lines.map((l) => { i++; return `<div class="kl" data-i="${i}"><span class="tick"></span><div class="kl-text">${s.aid.level === 'hints' ? `${esc(hint(l))}<button data-reveal="${i}">show</button>` : esc(l)}</div></div>`; }).join('')}`).join('');
+    // One block per part, in call order. Today's part: key lines that tick (as hints on
+    // hint days) plus its full text on script days. Other parts: their full text, quieter.
+    return s.aid.parts.map((p, n) => {
+      const first = i + 1;
+      i += p.key_lines.length;
+      // Hint day, today's part: just the key lines, half hidden. Otherwise the full text,
+      // with today's key lines marked inside it so they tick as you say them.
+      const body = p.practiced && !p.text
+        ? p.key_lines.map((l, k) => `<div class="kl" data-i="${first + k}"><span class="tick"></span><div class="kl-text">${esc(hint(l))}<button data-reveal="${first + k}">show</button></div></div>`).join('')
+        : `<div class="script-text">${p.practiced ? marked(p.text, p.key_lines, first) : esc(p.text)}</div>`;
+      return `<section class="aid-part ${p.practiced ? 'today' : 'other'}" data-part="${n}">
+        <div class="aid-head"><span class="label" style="margin: 0">${esc(p.name)}</span>${p.practiced ? '<span class="pill">today</span>' : ''}</div>
+        ${body}
+      </section>`;
+    }).join('');
   };
 
   render(`
@@ -470,11 +495,28 @@ async function startCall(w, d, btn) {
       <div class="card aid" id="aid">${aidPanel()}</div>
     </div>`);
 
+  // Follow the call: the part you are in is the first one with key lines still unsaid.
+  const partOf = s.aid.parts.flatMap((p, n) => p.key_lines.map(() => n));
+  let nowPart = -1;
   const tick = () => {
     const done = new Set(linesSaid(lines, said));
     for (const el of document.querySelectorAll('.kl')) el.classList.toggle('said', done.has(Number(el.dataset.i)));
+    // Where you are = the part of the furthest line you said; once that part is done, the
+    // next one. (Following the first unsaid line got stuck on any line you paraphrased.)
+    const furthest = done.size ? Math.max(...done) : -1;
+    let now = furthest < 0 ? 0 : partOf[furthest];
+    const partDone = lines.every((_, i) => partOf[i] !== now || done.has(i));
+    if (partDone && now < s.aid.parts.length - 1) now++;
+    if (now !== nowPart) {
+      nowPart = now;
+      document.querySelectorAll('.aid-part').forEach((el) => el.classList.toggle('now', Number(el.dataset.part) === now));
+      // Scroll the script box only, never the page: on a phone the page holds the hang-up button.
+      const box = document.getElementById('aid'), el = box?.querySelector(`.aid-part[data-part="${now}"]`);
+      if (box && el) box.scrollTo({ top: Math.max(0, el.offsetTop - box.offsetTop - 12), behavior: 'smooth' });
+    }
     return done;
   };
+  tick();
   document.getElementById('aid').addEventListener('click', (e) => {
     const r = e.target.closest('[data-reveal]');
     if (r) {

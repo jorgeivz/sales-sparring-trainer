@@ -167,9 +167,16 @@ const routes = [
     const attempt = { id: crypto.randomUUID(), day: d.n, created: new Date().toISOString(), conversation_id: null, objections: p.objections, persona: p.persona, result: null };
     w.attempts.push(attempt);
     store.save(w);
+    // The whole call is on screen, in order: a call always starts at "Hello?", even on a
+    // pitch day. Parts not practiced today show in full; today's part follows the day's
+    // help level (full text, then hints). Days with a clean screen keep only the emergency line.
+    const clean = d.aid === 'none' || d.aid === 'emergency';
     const aid = d.aid === 'none' ? { level: 'none', parts: [] } : {
       level: d.aid,
-      parts: d.parts.map((part) => ({ part, name: PART_NAMES[part], text: d.aid === 'script' ? w.script.parts[part].text : '', key_lines: w.script.parts[part].key_lines })),
+      parts: (clean ? d.parts : PARTS).map((part) => {
+        const practiced = d.parts.includes(part);
+        return { part, name: PART_NAMES[part], practiced, text: !practiced || d.aid === 'script' ? w.script.parts[part].text : '', key_lines: w.script.parts[part].key_lines };
+      }),
     };
     return { attempt: attempt.id, token, overrides: p.overrides, aid, prospect: { name: p.persona.name, role: p.persona.role }, minutes: d.minutes };
   }],

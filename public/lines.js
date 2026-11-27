@@ -33,8 +33,9 @@ export function linesSaid(lines, saidByRep, threshold = 0.7) {
   return out;
 }
 
-/** First words of a line, for the "hints only" days. */
-export function hint(line, words = 4) {
+/** The first half of a line (at least 4 words), for the "hints only" days. */
+export function hint(line, min = 4) {
   const w = String(line).replace(/\{[^}]*\}/g, '…').replace(/\s+/g, ' ').trim().split(' ');
+  const words = Math.max(min, Math.ceil(w.length / 2));
   return w.length <= words ? w.join(' ') : `${w.slice(0, words).join(' ')}…`;
 }
