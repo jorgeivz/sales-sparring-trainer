@@ -30,9 +30,10 @@ outside world only through **Sprites connectors**. No API key lives on the machi
    they warm up when you ask and listen, cool down when you pitch early, argue or rush, and
    doubt anything that sounds too good to be true. Each one has their own voice, warmer
    on the easy days and harder at the end. Retry a day and you call someone new, so you
-   cannot memorize the answers. The screen
-   help is retired as you go: full script with lines that tick as you say them (days 1-3),
-   hints only (4-5), an emergency button (6), nothing (7). Score 70+ to unlock the next day.
+   cannot memorize the answers. The whole call is on screen in order and follows you as
+   you talk, while the help for the day's part is retired: full text with key lines that
+   tick as you say them (days 1-3), half-line hints (4-5), a clean screen with an emergency
+   button (6), nothing at all (7). Score 70+ to unlock the next day.
 5. **Ask, then stop talking.** On the days you ask for a next step, the coach finds your
    closing question in the transcript. Keep talking after it and the score stops at 69,
    one under the pass mark. It also shows how much of the call you did the talking.
@@ -66,7 +67,7 @@ sprite exec --dir /home/sprite/app -- node scripts/setup-agent.mjs   # prints EL
 sprite exec --dir /home/sprite/app -- sh -c 'echo ELEVENLABS_AGENT_ID=... > .env'
 sprite exec --dir /home/sprite/app -- node scripts/seed-demo.mjs        # optional demo company
 sprite exec -- sprite-env services create web --cmd node --args server.mjs --dir /home/sprite/app --http-port 8080
-sprite url update --auth public
+sprite config update --url-auth public
 ```
 
 ## Run it on a laptop
@@ -78,3 +79,6 @@ node server.mjs        # http://localhost:8080
 ```
 
 No dependencies, no build step. Node 22+.
+
+`MAX_CALLS_PER_DAY` (default 30) and `MAX_CALLS_PER_WORKSPACE` (default 10) cap voice
+minutes on a public demo; the count is kept on disk so it survives the Sprite sleeping.

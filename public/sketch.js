@@ -75,6 +75,14 @@ export async function draw(host, diagram) {
       words.appendChild(n);
     }
   });
+  // On a phone the 640-wide drawing shrinks to half and its words get hard to read. Crop
+  // the empty margin around the drawing so it fills the width: same shapes, bigger letters.
+  if (host.clientWidth && host.clientWidth < 600) {
+    await document.fonts?.ready;
+    const b = svg.getBBox();
+    const pad = 10;
+    if (b.width > 0 && b.width < width - 2 * pad) svg.setAttribute('viewBox', `${b.x - pad} ${b.y - pad} ${b.width + 2 * pad} ${b.height + 2 * pad}`);
+  }
 }
 
 /** Draw every [data-sketch] placeholder on the page from a name → diagram map. */

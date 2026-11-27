@@ -128,6 +128,9 @@ svg.sketch { display: block; width: 100%; height: auto; overflow: visible; }
 .feature p { color: var(--ink-2); font-size: 17px; margin: 0; }
 .center-actions { justify-content: center; margin-top: var(--s8); }
 .day-sketch { max-width: 900px; margin: 0 auto; }
+@media (max-width: 600px) {
+  .sketch-card, .hero .sketch-card { padding: var(--s3) var(--s2); }
+}
 .part .sketch-card { margin-top: var(--s4); box-shadow: none; background: var(--paper); }
 
 /* ---------- loading ---------- */
