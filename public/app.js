@@ -94,7 +94,7 @@ function home() {
       <div>
         <span class="label">The script</span>
         <h2>Four parts. One of them decides the sale.</h2>
-        <p>Paste the script you use today, messy is fine, or get a first draft. The coach checks every part against 16 rules and proposes concrete edits. You accept or reject each one, and only what you accept goes in, word for word.</p>
+        <p>Paste the script you use today, messy is fine, or get a first draft. The coach checks every part against 17 rules and proposes concrete edits. You accept or reject each one, and only what you accept goes in, word for word.</p>
       </div>
       ${sketch('parts')}
     </div>
@@ -148,6 +148,7 @@ function business(w) {
       <label>Who you call<small>Be specific: who they are and why they are expecting your call.</small><input name="customer" maxlength="300" required value="${esc(b.customer)}" placeholder="Homeowners in Phoenix who filled out a web form about solar"></label>
       <label>Price<small>Optional</small><input name="price" maxlength="120" value="${esc(b.price)}" placeholder="About $120/month on a 20-year loan"></label>
       <label>Why customers buy from you<small>Optional: proof, guarantees, what makes you different.</small><input name="proof" maxlength="300" value="${esc(b.proof)}" placeholder="Local since 2014, 25-year panel warranty"></label>
+      <label>Your numbers and facts<small>What a buyer asks before saying yes: how the price is worked out, what is covered, how long it takes, what happens if it breaks. The script and your on-screen numbers card use only what you write here, so the rep can close on the call.</small><textarea name="facts" maxlength="2000" rows="6" placeholder="Monthly payment is about half the current power bill: a $240 bill is about $120/month, $0 down, 20-year loan.&#10;25-year panel warranty, 10-year workmanship warranty. Our own crew fixes it within 48 hours.&#10;Roof check this week, permits 2-4 weeks, install in 2 days.">${esc(b.facts)}</textarea></label>
       <div class="actions"><button class="btn" type="submit">Continue to the script</button></div>
       <p class="err" id="err" role="alert"></p>
     </form>`);
@@ -174,7 +175,7 @@ function scriptSource(w) {
   render(`
     <span class="label">Step 2 of 3</span>
     <h2>Start from your script, or from scratch.</h2>
-    <p class="lede">Either way, the coach reviews it against 16 rules before you train on it.</p>
+    <p class="lede">Either way, the coach reviews it against 17 rules before you train on it.</p>
     ${sketch('parts', 'The coach splits your script into these four parts and checks each one.')}
     <div class="grid2" style="margin-top: var(--s5)">
       <button class="choice" data-k="paste" aria-pressed="true"><b>I have a script</b><span>Paste it as it is, messy is fine. The coach splits it into opener, discovery, pitch and close without rewriting a word.</span></button>
@@ -216,7 +217,7 @@ function scriptEdit(w) {
   render(`
     <span class="label">Step 2 of 3 · Version ${w.script.version}</span>
     <h2>Your script, in four parts.</h2>
-    <p class="lede">Edit freely. When it reads like you, run the review: it checks every part against the coach's 16 rules.</p>
+    <p class="lede">Edit freely. When it reads like you, run the review: it checks every part against the coach's 17 rules.</p>
     ${note}
     <form id="f">
       ${meta.parts.map((p) => `<div class="part"><div class="part-head"><h3>${meta.part_names[p]}</h3></div>
@@ -235,7 +236,7 @@ function scriptEdit(w) {
   };
   const busy = (msg) => { document.getElementById('busy').innerHTML = msg ? working(msg) : ''; for (const b of document.querySelectorAll('.actions .btn')) b.disabled = !!msg; };
   document.getElementById('review').onclick = async () => {
-    busy('Reviewing all four parts against 16 rules… about 30 seconds.');
+    busy('Reviewing all four parts against 17 rules… about 30 seconds.');
     try { await saveIfDirty(); await api('POST', `/api/w/${w.id}/diagnose`); route(); } catch (x) { busy(''); document.getElementById('err').textContent = x.message; }
   };
   const lock = document.getElementById('lock');
@@ -388,6 +389,15 @@ async function downloadScript(w, btn) {
         y += boxH;
       }
     }
+    const answers = w.script.answers || [];
+    if (answers.length) {
+      y += 22; room(80);
+      doc.setDrawColor(...ROPE); doc.setLineWidth(1.5); doc.line(M, y, M + 28, y);
+      y += 12;
+      lines('Your numbers', 'times', 'bold', 17, INK, M, TW, 1.3);
+      lines('When they ask, answer on the call.', 'helvetica', 'normal', 10.5, INK2);
+      for (const x of answers) { y += 6; room(40); lines(x.q, 'helvetica', 'bold', 11, INK, M, TW, 1.45); lines(x.a, 'helvetica', 'normal', 11, INK2, M, TW, 1.55); }
+    }
     const n = doc.getNumberOfPages();
     for (let i = 1; i <= n; i++) {
       doc.setPage(i).setFont('helvetica', 'normal').setFontSize(8.5).setTextColor(...INK3);
@@ -403,12 +413,19 @@ async function downloadScript(w, btn) {
   }
 }
 
+// The rep's numbers card: the buyer's questions with the answers, built from the business facts.
+const numbersCard = (answers, open = true) => answers?.length ? `<details class="numbers card" ${open ? 'open' : ''}>
+  <summary><span class="label" style="margin: 0">Your numbers</span></summary>
+  ${answers.map((x) => `<div class="qa"><b>${esc(x.q)}</b><p>${esc(x.a)}</p></div>`).join('')}
+</details>` : '';
+
 function scriptLocked(w) {
   render(`
     <span class="label">Step 2 of 3 · Locked · Version ${w.script.version}</span>
     <h2>Your script is locked.</h2>
     <p class="lede">The highlighted sentences are your key lines: the bootcamp listens for them on every call, and they tick on screen as you say them.</p>
     ${meta.parts.map((p) => `<div class="part card"><h3>${meta.part_names[p]}</h3><div class="script-text">${markKeyLines(w.script.parts[p].text, w.script.parts[p].key_lines)}</div></div>`).join('')}
+    ${w.script.answers?.length ? `<p class="lede" style="margin-top: var(--s6)">When they ask for the numbers, answer on the call. This card is on screen every day of the bootcamp, like the price sheet on a rep's desk.</p>${numbersCard(w.script.answers)}` : ''}
     <div class="actions">
       <a class="btn" href="#/w/${w.id}/bootcamp">Go to the bootcamp</a>
       <button class="btn ghost" id="download">Download my script</button>
@@ -563,12 +580,15 @@ async function startCall(w, d, btn) {
   render(`
     <span class="label">${d.n === FREE_N ? 'Free practice' : `Day ${d.n} · ${esc(d.title)}`}</span>
     <div class="call-grid">
-      <div class="ring">
-        <div class="orb" id="orb"></div>
-        <div class="status" id="status">Dialing…</div>
-        <div class="timer" id="timer">0:00 <small>/ ${s.minutes}:00</small></div>
-        <p class="who">${esc(s.prospect.name)}, ${esc(s.prospect.role)}</p>
-        <button class="btn ink" id="hangup">Hang up</button>
+      <div class="call-left">
+        <div class="ring">
+          <div class="orb" id="orb"></div>
+          <div class="status" id="status">Dialing…</div>
+          <div class="timer" id="timer">0:00 <small>/ ${s.minutes}:00</small></div>
+          <p class="who">${esc(s.prospect.name)}, ${esc(s.prospect.role)}</p>
+          <button class="btn ink" id="hangup">Hang up</button>
+        </div>
+        ${numbersCard(s.answers, matchMedia('(min-width: 721px)').matches)}
       </div>
       <div class="card aid" id="aid">${aidPanel()}</div>
     </div>`);
@@ -607,7 +627,7 @@ async function startCall(w, d, btn) {
     aids.emergencies++;
     const done = tick();
     const next = lines.find((_, i) => !done.has(i));
-    document.getElementById('sos-line').innerHTML = `<div class="emergency-line">${esc(next || 'You have said every key line. Ask for the next step.')}</div>`;
+    document.getElementById('sos-line').innerHTML = `<div class="emergency-line">${esc(next || 'You have said every key line. Ask for the decision.')}</div>`;
     setTimeout(() => { const el = document.getElementById('sos-line'); if (el) el.innerHTML = ''; }, 7000);
   };
 
@@ -699,7 +719,7 @@ function result(w, d, r) {
       <div class="big-num">${r.score}<small>/100</small></div>
       <div>
         <span class="verdict ${r.passed ? 'won' : 'lost'}">${free ? (r.passed ? 'Strong call' : `Under ${w.pass_score}`) : r.passed ? `Passed day ${d.n}` : `Need ${w.pass_score} to pass`}</span>
-        ${d.parts.some((p) => p === 'pitch' || p === 'close') ? `<span class="verdict plain">${r.closed ? 'Next step booked' : 'No next step'}</span>` : ''}
+        ${d.parts.some((p) => p === 'pitch' || p === 'close') ? `<span class="verdict plain">${r.closed ? 'They said yes' : 'No yes yet'}</span>` : ''}
         <div class="stats">
           ${b.adherence !== null && b.adherence !== undefined ? `<div><b>${b.adherence}%</b>key lines said</div>` : ''}
           <div><b>${r.talk_ratio}%</b>of the time you talked</div>
@@ -711,7 +731,7 @@ function result(w, d, r) {
     </div>
     ${r.close_silence?.asked ? (r.close_silence.waited
       ? `<div class="banner calm part"><div><b>You asked and stopped talking.</b> <span class="serif-q">“${esc(r.close_silence.question)}”</span> Then you let them answer. That pause closes more deals than any line.</div></div>`
-      : `<div class="card miss part"><span class="label">You asked for the next step, then kept talking</span>
+      : `<div class="card miss part"><span class="label">You asked for the decision, then kept talking</span>
         <div class="said-q">“${esc(r.close_silence.question)}”</div>
         <p style="margin: var(--s2) 0">Right after it: “${esc(r.close_silence.after)}”</p>
         <div class="instead">Ask, then stay quiet until they answer. That is why this score stops at ${w.pass_score - 1}.</div></div>`) : ''}

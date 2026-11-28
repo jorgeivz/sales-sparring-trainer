@@ -204,7 +204,20 @@ a.rung:active { transform: scale(.99); }
 .facts b { display: block; font: 700 18px/1.2 'Fraunces', serif; color: var(--ink); }
 
 .call-grid { margin-top: var(--s5); display: grid; grid-template-columns: minmax(240px, 320px) 1fr; gap: var(--s6); align-items: start; }
-.ring { display: grid; place-items: center; padding: var(--s5) 0; position: sticky; top: var(--s4); }
+.call-left { position: sticky; top: var(--s4); display: grid; gap: var(--s4); }
+.ring { display: grid; place-items: center; padding: var(--s5) 0; }
+.numbers { padding: var(--s4) var(--s5); }
+.call-left .numbers { max-height: 42vh; overflow-y: auto; overscroll-behavior: contain; }
+.numbers summary { cursor: pointer; list-style: none; border-radius: 6px; display: flex; align-items: center; gap: var(--s2); }
+.numbers summary::-webkit-details-marker { display: none; }
+.numbers summary::after { content: ' +'; color: var(--ink-3); font: 500 13px/1 'JetBrains Mono', monospace; }
+.numbers[open] summary::after { content: ' −'; }
+.numbers summary:hover .label { color: var(--rope-deep); }
+.numbers summary:active { opacity: .7; }
+.qa { padding: var(--s3) 0; border-bottom: 1px solid var(--line); }
+.qa:last-child { border-bottom: 0; padding-bottom: 0; }
+.qa b { display: block; font-weight: 600; font-size: 14px; line-height: 1.45; }
+.qa p { margin: var(--s1) 0 0; font-size: 14px; line-height: 1.55; color: var(--ink-2); }
 .orb {
   width: 200px; height: 200px; border-radius: 50%; position: relative;
   background: radial-gradient(circle at 35% 30%, #F36A4F, var(--rope) 45%, var(--rope-deep));
@@ -288,7 +301,8 @@ footer { margin-top: var(--s8); font-size: 13px; color: var(--ink-3); }
   header.top { margin-bottom: var(--s6); }
   .steps a, .steps span { font-size: 10px; padding: 6px var(--s2); letter-spacing: .03em; }
   .call-grid { grid-template-columns: 1fr; gap: var(--s4); }
-  .ring { position: static; padding: var(--s3) 0; }
+  .call-left { position: static; }
+  .ring { padding: var(--s3) 0; }
   .orb { width: 140px; height: 140px; }
   .score-card, .ring-score { grid-template-columns: 1fr; gap: var(--s4); }
   .big-num { font-size: 76px; }

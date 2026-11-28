@@ -28,6 +28,15 @@ const business = S.cleanBusiness({
   customer: 'Homeowners in Phoenix who filled out a web form asking about solar',
   price: 'About $120/month on a 20-year loan',
   proof: 'Local installer since 2014, 25-year panel warranty',
+  facts: `Payment: $0 down, 20-year loan at 5.99% APR, no prepayment penalty. The monthly payment is usually about half the current average power bill: a $240 average bill is about $120 a month; most homes land between $90 and $170.
+The system is sized to cover about 90% of the home's yearly usage. The exact number comes from the last 12 months of the APS bill, which we can pull on the call with the account number.
+Warranty: 25 years on panels and inverter, 10 years on our workmanship, including any roof leak from the install.
+Production guarantee: if the system makes less than 90% of the estimate in a year, we pay the difference.
+Repairs: our own crew, no subcontractors, out within 48 hours.
+Timeline: free roof check within 7 days, permits 2 to 4 weeks, install in 2 days, then 2 to 3 weeks for APS to switch it on.
+If they sell the house, the loan can be paid off or move to the buyer.
+We do not promise a tax credit.
+Getting started: e-sign the agreement on the call and pick the roof-check day; there is a 3-day cancellation period with no fee.`,
 });
 
 const weakScript = `Hi, is this {name}? Great! How are you doing today? This is Alex with Bright Roof Solar, we're the number one solar installer in the Valley and we've been in business since 2014, family owned and operated.
@@ -48,7 +57,12 @@ let script = await S.split(weakScript);
 log('split');
 const before = await S.diagnose(business, script);
 log(`review: ${before.score}/100, ${before.changes.length} edits`);
-const { script: improved, applied } = S.applyChanges(script, before.changes, before.changes.map((c) => c.id));
+const first = S.applyChanges(script, before.changes, before.changes.map((c) => c.id));
+log(`applied ${first.applied.length}`);
+// A second review, like an owner who runs it again after the first round of edits.
+const again = await S.diagnose(business, first.script);
+log(`second review: ${again.score}/100, ${again.changes.length} edits`);
+const { script: improved, applied } = S.applyChanges(first.script, again.changes, again.changes.map((c) => c.id));
 log(`applied ${applied.length}`);
 const locked = await S.lock(business, improved, before.objections);
 log(`problems: ${locked.pitch_problems.join(' | ')}`);
@@ -57,7 +71,7 @@ log(`locked, lead ${locked.lead.type}, prospects: ${Object.values(locked.prospec
 const w = {
   business,
   script: locked.script,
-  diagnosis: { ...before, applied, decided: true },
+  diagnosis: { ...before, applied: first.applied, decided: true },
   prospects: locked.prospects,
   pitch_problems: locked.pitch_problems,
   lead: locked.lead,

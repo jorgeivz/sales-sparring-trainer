@@ -178,7 +178,9 @@ const routes = [
         return { part, name: PART_NAMES[part], practiced, text: !practiced || d.aid === 'script' ? w.script.parts[part].text : '', key_lines: w.script.parts[part].key_lines };
       }),
     };
-    return { attempt: attempt.id, token, overrides: p.overrides, aid, prospect: { name: p.persona.name, role: p.persona.role }, minutes: d.minutes };
+    // The numbers card stays on screen every day, like the price sheet on a real rep's desk:
+    // it holds facts, not script lines, so it does not undo the help being retired.
+    return { attempt: attempt.id, token, overrides: p.overrides, aid, answers: w.script.answers || [], prospect: { name: p.persona.name, role: p.persona.role }, minutes: d.minutes };
   }],
 
   ['POST', /^\/api\/w\/([\w-]+)\/result$/, async (body, [id]) => {

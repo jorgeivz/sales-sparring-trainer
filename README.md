@@ -9,18 +9,24 @@ outside world only through **Sprites connectors**. No API key lives on the machi
 
 | Connector  | What it does here |
 |------------|-------------------|
-| OpenRouter | Drafts, splits and reviews your script against a 16-rule checklist; picks your key lines and builds your seven prospects; scores every call |
+| OpenRouter | Drafts, splits and reviews your script against a 17-rule checklist; picks your key lines and builds your seven prospects; scores every call |
 | ElevenLabs | One-use token for each voice call, then the finished transcript |
 
 ## What it does
 
 1. **Your business.** What you sell, who you call, the price.
 2. **Your script.** Paste yours (messy is fine) or get a first draft. The coach checks every
-   part (opener, discovery, pitch, close) against 16 rules and proposes concrete edits. You
+   part (opener, discovery, pitch, close) against 17 rules and proposes concrete edits. You
    accept or reject each one; the server applies exactly what you accepted, word for word.
    Every quote the coach shows as evidence is checked against your script.
+   Step 1 asks for **your numbers and facts** (how the price is worked out, what is covered,
+   how long it takes, what happens if it breaks), because this is a full sale on one call:
+   rule 17 fails any pitch that sends the numbers to a later meeting, and the close asks
+   for the decision, not for an appointment.
 3. **Lock it.** The coach picks your key lines and builds seven prospects from your script,
-   one per day. Each one lives with problems your pitch solves, keeps facts to themselves
+   one per day, and a **numbers card**: the questions a buyer asks before saying yes, with
+   answers built only from your facts (an answer with a number you never gave is thrown
+   away). The card stays on screen every day, like the price sheet on a rep's desk. Each one lives with problems your pitch solves, keeps facts to themselves
    until you ask, and has their own objections. You never pick or edit who you call:
    otherwise you would pick the easy one.
 4. **Seven calls, seven people.** One part of the script per day, and each day a harder
