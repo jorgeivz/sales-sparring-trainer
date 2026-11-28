@@ -328,6 +328,27 @@ function markKeyLines(text, lines) {
   return html;
 }
 
+// The locked script as a plain-text file, so the rep can print it or keep it next to the phone.
+function downloadScript(w) {
+  const rule = '-'.repeat(48);
+  const body = [
+    `${w.business?.company || 'My'} sales script`,
+    `Version ${w.script.version}${w.script.locked ? ' (locked)' : ''}`,
+    '',
+    'Lines marked with * are your key lines: the bootcamp listens for them on every call.',
+    '',
+    ...meta.parts.flatMap((p) => {
+      const part = w.script.parts[p];
+      const keys = part.key_lines || [];
+      return [rule, meta.part_names[p].toUpperCase(), rule, part.text.trim(), '', ...(keys.length ? ['Key lines:', ...keys.map((k) => `  * ${k}`), ''] : [])];
+    }),
+  ].join('\n');
+  const slug = String(w.business?.company || 'my').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'my';
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([body], { type: 'text/plain;charset=utf-8' })), download: `${slug}-sales-script-v${w.script.version}.txt` });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
 function scriptLocked(w) {
   render(`
     <span class="label">Step 2 of 3 · Locked · Version ${w.script.version}</span>
@@ -336,9 +357,11 @@ function scriptLocked(w) {
     ${meta.parts.map((p) => `<div class="part card"><h3>${meta.part_names[p]}</h3><div class="script-text">${markKeyLines(w.script.parts[p].text, w.script.parts[p].key_lines)}</div></div>`).join('')}
     <div class="actions">
       <a class="btn" href="#/w/${w.id}/bootcamp">Go to the bootcamp</a>
+      <button class="btn ghost" id="download">Download my script</button>
       <button class="btn ghost" id="unlock">Unlock to improve it</button>
     </div>
     <p class="note">Unlocking keeps your progress. Locking again picks new key lines and builds new prospects from the new script.</p>`);
+  document.getElementById('download').onclick = () => downloadScript(w);
   document.getElementById('unlock').onclick = async () => { await api('POST', `/api/w/${w.id}/unlock`); route(); };
 }
 
@@ -384,7 +407,8 @@ async function bootcamp(w) {
         <div class="n" style="font-size: 26px">${a.day === FREE_N ? '∞' : `D${a.day}`}</div>
         <div><b>${esc(dayTitle(a.day))}</b><small>${new Date(a.created).toLocaleString()} · ${a.passed ? 'passed' : 'not passed'}${a.sample ? ' · sample' : ''}</small></div>
         <div class="best">${a.score}</div></a>`).join('')}</div>` : ''}
-    <div class="actions"><a class="btn small ghost" href="#/w/${w.id}/script">See my locked script</a></div>`);
+    <div class="actions"><a class="btn small ghost" href="#/w/${w.id}/script">See my locked script</a><button class="btn small ghost" id="download">Download my script</button></div>`);
+  document.getElementById('download').onclick = () => downloadScript(w);
 }
 
 // ---------------------------------------------------------------- day + call
