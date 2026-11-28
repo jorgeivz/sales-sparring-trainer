@@ -686,9 +686,21 @@ async function startCall(w, d, btn) {
 
 async function waitForResult(w, d, attempt, conversation_id, aids) {
   render(`<div class="ring" style="position: static"><div class="orb listening"></div><div class="status">Your coach is scoring the call…</div></div><p class="err center" id="err" role="alert" style="text-align:center"></p>`);
+  // The Sprite's proxy can answer 502/503/504 for a moment (or the network can drop): those are
+  // retried, so a passing hiccup never loses the call. Real errors (4xx, 500) stop at once.
+  const transient = (x) => x instanceof TypeError || /^Error 50[234]$/.test(x.message);
   try {
     for (let i = 0; i < 40; i++) {
-      const r = await api('POST', `/api/w/${w.id}/result`, { attempt, conversation_id, aids });
+      let r;
+      try {
+        r = await api('POST', `/api/w/${w.id}/result`, { attempt, conversation_id, aids });
+      } catch (x) {
+        if (!transient(x) || i === 39) throw x;
+        document.getElementById('err').textContent = 'The connection blinked. Still scoring…';
+        await new Promise((ok) => setTimeout(ok, 3000));
+        continue;
+      }
+      document.getElementById('err').textContent = '';
       if (r.status !== 202) {
         const fresh = await api('GET', `/api/w/${w.id}`);
         steps(fresh, 'bootcamp');
