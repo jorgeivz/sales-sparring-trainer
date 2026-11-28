@@ -339,7 +339,17 @@ async function downloadScript(w, btn) {
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), M = 56, TW = W - 2 * M;
     const INK = [23, 20, 15], INK2 = [74, 67, 58], INK3 = [133, 123, 110], ROPE = [217, 68, 43], WASH = [251, 236, 231];
-    const company = w.business?.company || 'My company';
+    // The PDF's built-in fonts only know Latin-1. A character outside it (the non-breaking
+    // hyphen in "20‑year", curly quotes, "≈") gets measured wrong, letter-spaced, and runs off
+    // the page. So every string is mapped to plain characters first.
+    const plain = (t) => String(t ?? '')
+      .replace(/[\u2010-\u2013\u2212]/g, '-').replace(/[\u2014\u2015]/g, ' - ')
+      .replace(/[\u2018\u2019\u201A\u2032]/g, "'").replace(/[\u201C\u201D\u201E\u2033]/g, '"')
+      .replace(/\u2026/g, '...').replace(/\u2248/g, '~').replace(/[\u00A0\u2000-\u200B\u202F]/g, ' ')
+      .replace(/\u2192/g, '->').replace(/\u2022/g, '*').normalize('NFKC').replace(/[^\x00-\xFF]/g, '')
+      .replace(/ {2,}/g, ' ');
+    const script = JSON.parse(JSON.stringify(w.script), (k, v) => (typeof v === 'string' ? plain(v) : v));
+    const company = plain(w.business?.company) || 'My company';
     let y = M;
     const room = (h) => { if (y + h > H - M) { doc.addPage(); y = M; } };
     const lines = (t, font, style, size, color, x = M, width = TW, lh = 1.45) => {
@@ -350,7 +360,7 @@ async function downloadScript(w, btn) {
     doc.setFont('helvetica', 'bold').setFontSize(9).setTextColor(...INK3).text('SALES SPARRING TRAINER', M + 16, y + 9);
     y += 34;
     lines(`${company} sales script`, 'times', 'bold', 26, INK, M, TW, 1.2);
-    lines(`Version ${w.script.version}${w.script.locked ? ' · locked' : ''}`, 'helvetica', 'normal', 10, INK3);
+    lines(`Version ${script.version}${script.locked ? ' · locked' : ''}`, 'helvetica', 'normal', 10, INK3);
     y += 6;
     lines('The boxed lines are your key lines: the bootcamp listens for them on every call.', 'helvetica', 'normal', 10.5, INK2);
     // Height a part needs, so a part that fits on one page is never split across two.
@@ -362,7 +372,7 @@ async function downloadScript(w, btn) {
       return 22 + 12 + 17 * 1.3 + 2 + body + (keys ? 36 + keys : 0);
     };
     for (const p of meta.parts) {
-      const part = w.script.parts[p];
+      const part = script.parts[p];
       const need = partHeight(part);
       if (y + need > H - M && need <= H - 2 * M) { doc.addPage(); y = M - 22; }
       y += 22; room(60);
@@ -389,7 +399,7 @@ async function downloadScript(w, btn) {
         y += boxH;
       }
     }
-    const answers = w.script.answers || [];
+    const answers = script.answers || [];
     if (answers.length) {
       y += 22; room(80);
       doc.setDrawColor(...ROPE); doc.setLineWidth(1.5); doc.line(M, y, M + 28, y);
@@ -401,11 +411,11 @@ async function downloadScript(w, btn) {
     const n = doc.getNumberOfPages();
     for (let i = 1; i <= n; i++) {
       doc.setPage(i).setFont('helvetica', 'normal').setFontSize(8.5).setTextColor(...INK3);
-      doc.text(`${company} · sales script v${w.script.version}`, M, H - 30);
+      doc.text(`${company} · sales script v${script.version}`, M, H - 30);
       doc.text(`${i} / ${n}`, W - M, H - 30, { align: 'right' });
     }
     const slug = company.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'my';
-    doc.save(`${slug}-sales-script-v${w.script.version}.pdf`);
+    doc.save(`${slug}-sales-script-v${script.version}.pdf`);
   } catch (x) {
     alert('The PDF could not be made. Check your connection and try again.');
   } finally {
