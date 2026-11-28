@@ -328,25 +328,79 @@ function markKeyLines(text, lines) {
   return html;
 }
 
-// The locked script as a plain-text file, so the rep can print it or keep it next to the phone.
-function downloadScript(w) {
-  const rule = '-'.repeat(48);
-  const body = [
-    `${w.business?.company || 'My'} sales script`,
-    `Version ${w.script.version}${w.script.locked ? ' (locked)' : ''}`,
-    '',
-    'Lines marked with * are your key lines: the bootcamp listens for them on every call.',
-    '',
-    ...meta.parts.flatMap((p) => {
+// The locked script as a PDF, so the rep can print it or keep it next to the phone.
+const JSPDF = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm';
+async function downloadScript(w, btn) {
+  const label = btn?.textContent;
+  if (btn) { btn.disabled = true; btn.textContent = 'Preparing PDF…'; }
+  try {
+    const { jsPDF } = await import(JSPDF);
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), M = 56, TW = W - 2 * M;
+    const INK = [23, 20, 15], INK2 = [74, 67, 58], INK3 = [133, 123, 110], ROPE = [217, 68, 43], WASH = [251, 236, 231];
+    const company = w.business?.company || 'My company';
+    let y = M;
+    const room = (h) => { if (y + h > H - M) { doc.addPage(); y = M; } };
+    const lines = (t, font, style, size, color, x = M, width = TW, lh = 1.45) => {
+      doc.setFont(font, style).setFontSize(size).setTextColor(...color);
+      for (const l of doc.splitTextToSize(String(t), width)) { room(size * lh); doc.text(l, x, y + size); y += size * lh; }
+    };
+    doc.setFillColor(...ROPE).circle(M + 5, y + 6, 5, 'F');
+    doc.setFont('helvetica', 'bold').setFontSize(9).setTextColor(...INK3).text('SALES SPARRING TRAINER', M + 16, y + 9);
+    y += 34;
+    lines(`${company} sales script`, 'times', 'bold', 26, INK, M, TW, 1.2);
+    lines(`Version ${w.script.version}${w.script.locked ? ' · locked' : ''}`, 'helvetica', 'normal', 10, INK3);
+    y += 6;
+    lines('The boxed lines are your key lines: the bootcamp listens for them on every call.', 'helvetica', 'normal', 10.5, INK2);
+    // Height a part needs, so a part that fits on one page is never split across two.
+    const partHeight = (part) => {
+      doc.setFont('helvetica', 'normal').setFontSize(11);
+      const body = part.text.trim().split(/\n+/).reduce((n, t) => n + doc.splitTextToSize(t, TW).length * 11 * 1.55 + 4, 0);
+      doc.setFontSize(10.5);
+      const keys = (part.key_lines || []).reduce((n, k) => n + doc.splitTextToSize(k, TW - 40).length * 15 + 5, 0);
+      return 22 + 12 + 17 * 1.3 + 2 + body + (keys ? 36 + keys : 0);
+    };
+    for (const p of meta.parts) {
       const part = w.script.parts[p];
+      const need = partHeight(part);
+      if (y + need > H - M && need <= H - 2 * M) { doc.addPage(); y = M - 22; }
+      y += 22; room(60);
+      doc.setDrawColor(...ROPE); doc.setLineWidth(1.5); doc.line(M, y, M + 28, y);
+      y += 12;
+      lines(meta.part_names[p], 'times', 'bold', 17, INK, M, TW, 1.3);
+      y += 2;
+      for (const para of part.text.trim().split(/\n+/)) { lines(para, 'helvetica', 'normal', 11, INK, M, TW, 1.55); y += 4; }
       const keys = part.key_lines || [];
-      return [rule, meta.part_names[p].toUpperCase(), rule, part.text.trim(), '', ...(keys.length ? ['Key lines:', ...keys.map((k) => `  * ${k}`), ''] : [])];
-    }),
-  ].join('\n');
-  const slug = String(w.business?.company || 'my').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'my';
-  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([body], { type: 'text/plain;charset=utf-8' })), download: `${slug}-sales-script-v${w.script.version}.txt` });
-  document.body.append(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      if (keys.length) {
+        doc.setFont('helvetica', 'normal').setFontSize(10.5);
+        const wrapped = keys.map((k) => doc.splitTextToSize(k, TW - 40));
+        const boxH = 30 + wrapped.reduce((n, l) => n + l.length * 15 + 5, 0);
+        y += 6; room(Math.min(boxH, H - 2 * M));
+        doc.setFillColor(...WASH).roundedRect(M, y, TW, boxH, 6, 6, 'F');
+        doc.setFont('helvetica', 'bold').setFontSize(8.5).setTextColor(...ROPE).text('KEY LINES', M + 14, y + 18);
+        let ky = y + 32;
+        for (const l of wrapped) {
+          doc.setFillColor(...ROPE).circle(M + 18, ky - 3.5, 2, 'F');
+          doc.setFont('helvetica', 'normal').setFontSize(10.5).setTextColor(...INK);
+          for (const t of l) { doc.text(t, M + 28, ky); ky += 15; }
+          ky += 5;
+        }
+        y += boxH;
+      }
+    }
+    const n = doc.getNumberOfPages();
+    for (let i = 1; i <= n; i++) {
+      doc.setPage(i).setFont('helvetica', 'normal').setFontSize(8.5).setTextColor(...INK3);
+      doc.text(`${company} · sales script v${w.script.version}`, M, H - 30);
+      doc.text(`${i} / ${n}`, W - M, H - 30, { align: 'right' });
+    }
+    const slug = company.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'my';
+    doc.save(`${slug}-sales-script-v${w.script.version}.pdf`);
+  } catch (x) {
+    alert('The PDF could not be made. Check your connection and try again.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = label; }
+  }
 }
 
 function scriptLocked(w) {
@@ -361,7 +415,7 @@ function scriptLocked(w) {
       <button class="btn ghost" id="unlock">Unlock to improve it</button>
     </div>
     <p class="note">Unlocking keeps your progress. Locking again picks new key lines and builds new prospects from the new script.</p>`);
-  document.getElementById('download').onclick = () => downloadScript(w);
+  document.getElementById('download').onclick = (e) => downloadScript(w, e.currentTarget);
   document.getElementById('unlock').onclick = async () => { await api('POST', `/api/w/${w.id}/unlock`); route(); };
 }
 
@@ -408,7 +462,7 @@ async function bootcamp(w) {
         <div><b>${esc(dayTitle(a.day))}</b><small>${new Date(a.created).toLocaleString()} · ${a.passed ? 'passed' : 'not passed'}${a.sample ? ' · sample' : ''}</small></div>
         <div class="best">${a.score}</div></a>`).join('')}</div>` : ''}
     <div class="actions"><a class="btn small ghost" href="#/w/${w.id}/script">See my locked script</a><button class="btn small ghost" id="download">Download my script</button></div>`);
-  document.getElementById('download').onclick = () => downloadScript(w);
+  document.getElementById('download').onclick = (e) => downloadScript(w, e.currentTarget);
 }
 
 // ---------------------------------------------------------------- day + call
