@@ -247,14 +247,14 @@ export const DAY = {
     ],
   },
   7: {
-    title: 'Graduation: nothing on screen, your script from memory, pass or fail',
+    title: 'Graduation: no script on screen, your script from memory, pass or fail',
     width: W, height: 240,
     shapes: [
       { t: 'box', x: 40, y: 34, w: 220, h: 150 },
       { t: 'line', x1: 60, y1: 60, x2: 240, y2: 60, dash: true },
       { t: 'line', x1: 60, y1: 110, x2: 240, y2: 110, dash: true },
       { t: 'line', x1: 60, y1: 160, x2: 240, y2: 160, dash: true },
-      { t: 'text', x: 150, y: 214, txt: 'nothing on screen', size: 17 },
+      { t: 'text', x: 150, y: 214, txt: 'no script on screen', size: 17 },
       { t: 'line', x1: 272, y1: 110, x2: 362, y2: 110, arrow: true },
       { t: 'circle', x: 470, y: 108, d: 170, fill: 'solid', c: 'rope' },
       { t: 'text', x: 470, y: 108, txt: 'PASS', size: 40, bold: true, inv: true },

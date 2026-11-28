@@ -555,7 +555,7 @@ async function startCall(w, d, btn) {
   };
 
   const aidPanel = () => {
-    if (s.aid.level === 'none') return `<div class="memory"><div><b>From memory.</b>Nothing on screen today. You know this script.</div></div>`;
+    if (s.aid.level === 'none') return `<div class="memory"><div><b>From memory.</b>No script on screen today. You know it. Your numbers card is still there.</div></div>`;
     if (s.aid.level === 'emergency') return `<span class="label">Under pressure</span>
       <p class="muted">Clean screen. If you freeze, the emergency button shows your next line. Every use costs points.</p>
       <button class="btn ink small" id="sos">Emergency: show my next line</button><div id="sos-line"></div>`;

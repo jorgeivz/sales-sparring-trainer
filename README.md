@@ -39,7 +39,7 @@ outside world only through **Sprites connectors**. No API key lives on the machi
    cannot memorize the answers. The whole call is on screen in order and follows you as
    you talk, while the help for the day's part is retired: full text with key lines that
    tick as you say them (days 1-3), half-line hints (4-5), a clean screen with an emergency
-   button (6), nothing at all (7). Score 70+ to unlock the next day.
+   button (6), no script at all (7); your numbers card stays on screen every day. Score 70+ to unlock the next day.
 5. **Ask, then stop talking.** On the days you ask for a next step, the coach finds your
    closing question in the transcript. Keep talking after it and the score stops at 69,
    one under the pass mark. It also shows how much of the call you did the talking.
