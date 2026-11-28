@@ -627,7 +627,7 @@ async function startCall(w, d, btn) {
     aids.emergencies++;
     const done = tick();
     const next = lines.find((_, i) => !done.has(i));
-    document.getElementById('sos-line').innerHTML = `<div class="emergency-line">${esc(next || 'You have said every key line. Ask for the decision.')}</div>`;
+    document.getElementById('sos-line').innerHTML = `<div class="emergency-line">${esc(next || 'You have said every key line. Ask for the sale.')}</div>`;
     setTimeout(() => { const el = document.getElementById('sos-line'); if (el) el.innerHTML = ''; }, 7000);
   };
 
@@ -719,7 +719,7 @@ function result(w, d, r) {
       <div class="big-num">${r.score}<small>/100</small></div>
       <div>
         <span class="verdict ${r.passed ? 'won' : 'lost'}">${free ? (r.passed ? 'Strong call' : `Under ${w.pass_score}`) : r.passed ? `Passed day ${d.n}` : `Need ${w.pass_score} to pass`}</span>
-        ${d.parts.some((p) => p === 'pitch' || p === 'close') ? `<span class="verdict plain">${r.closed ? 'They said yes' : 'No yes yet'}</span>` : ''}
+        ${d.parts.some((p) => p === 'pitch' || p === 'close') ? `<span class="verdict plain">${r.closed ? 'Sale closed' : 'No sale yet'}</span>` : ''}
         <div class="stats">
           ${b.adherence !== null && b.adherence !== undefined ? `<div><b>${b.adherence}%</b>key lines said</div>` : ''}
           <div><b>${r.talk_ratio}%</b>of the time you talked</div>
@@ -731,7 +731,7 @@ function result(w, d, r) {
     </div>
     ${r.close_silence?.asked ? (r.close_silence.waited
       ? `<div class="banner calm part"><div><b>You asked and stopped talking.</b> <span class="serif-q">“${esc(r.close_silence.question)}”</span> Then you let them answer. That pause closes more deals than any line.</div></div>`
-      : `<div class="card miss part"><span class="label">You asked for the decision, then kept talking</span>
+      : `<div class="card miss part"><span class="label">You asked for the sale, then kept talking</span>
         <div class="said-q">“${esc(r.close_silence.question)}”</div>
         <p style="margin: var(--s2) 0">Right after it: “${esc(r.close_silence.after)}”</p>
         <div class="instead">Ask, then stay quiet until they answer. That is why this score stops at ${w.pass_score - 1}.</div></div>`) : ''}

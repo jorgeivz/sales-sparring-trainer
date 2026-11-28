@@ -22,7 +22,7 @@ outside world only through **Sprites connectors**. No API key lives on the machi
    Step 1 asks for **your numbers and facts** (how the price is worked out, what is covered,
    how long it takes, what happens if it breaks), because this is a full sale on one call:
    rule 17 fails any pitch that sends the numbers to a later meeting, and the close asks
-   for the decision, not for an appointment.
+   for the sale, never for an appointment.
 3. **Lock it.** The coach picks your key lines and builds seven prospects from your script,
    one per day, and a **numbers card**: the questions a buyer asks before saying yes, with
    answers built only from your facts (an answer with a number you never gave is thrown
@@ -40,7 +40,7 @@ outside world only through **Sprites connectors**. No API key lives on the machi
    you talk, while the help for the day's part is retired: full text with key lines that
    tick as you say them (days 1-3), half-line hints (4-5), a clean screen with an emergency
    button (6), no script at all (7); your numbers card stays on screen every day. Score 70+ to unlock the next day.
-5. **Ask, then stop talking.** On the days you ask for a next step, the coach finds your
+5. **Ask, then stop talking.** On the days you ask for the sale, the coach finds your
    closing question in the transcript. Keep talking after it and the score stops at 69,
    one under the pass mark. It also shows how much of the call you did the talking.
 6. **Free practice after graduation.** The whole call against a new person every time,

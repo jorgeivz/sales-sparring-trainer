@@ -210,7 +210,7 @@ export const DAY = {
       { t: 'text', x: 293, y: 66, txt: 'silence', size: 21, bold: true },
       { t: 'text', x: 293, y: 88, txt: 'let them talk', size: 14 },
       { t: 'line', x1: 372, y1: 58, x2: 446, y2: 40, arrow: true },
-      { t: 'text', x: 534, y: 44, txt: 'yes → next step', size: 18 },
+      { t: 'text', x: 534, y: 44, txt: 'yes → the sale', size: 18 },
       { t: 'line', x1: 372, y1: 84, x2: 446, y2: 122, arrow: true },
       { t: 'text', x: 488, y: 136, txt: 'no?', size: 24, bold: true, c: 'rope' },
       { t: 'box', x: 426, y: 162, w: 200, h: 50 },
