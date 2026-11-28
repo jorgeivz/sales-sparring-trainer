@@ -27,7 +27,28 @@ const DEMO_TEMPLATE = path.join(ROOT, 'data', 'demo-template.json');
 const MIN_SECONDS = 20;
 
 const fail = (status, error) => [status, { error }];
-const mustW = (id) => store.load(id);
+// The demo company is a copy of the template made when someone opens it. When the template is
+// rebuilt (a new script, new prospects), a copy made earlier gets the new script the next time
+// it is loaded; its calls stay.
+const DEMO_FIELDS = ['business', 'script', 'diagnosis', 'prospects', 'pitch_problems', 'lead', 'objections'];
+let demoCache = null;
+function demoTemplate() {
+  if (!fs.existsSync(DEMO_TEMPLATE)) return null;
+  const raw = fs.readFileSync(DEMO_TEMPLATE, 'utf8');
+  const rev = crypto.createHash('md5').update(raw).digest('hex').slice(0, 12);
+  if (demoCache?.rev !== rev) demoCache = { rev, t: JSON.parse(raw) };
+  return demoCache;
+}
+function mustW(id) {
+  const w = store.load(id);
+  if (!w?.demo) return w;
+  const d = demoTemplate();
+  if (!d || w.demo_rev === d.rev) return w;
+  for (const k of DEMO_FIELDS) w[k] = structuredClone(d.t[k]);
+  Object.assign(w, { demo_rev: d.rev, weak_spot: null, weak_objection: null });
+  store.save(w);
+  return w;
+}
 
 /** Builds the next new person for a day in the background. Never fails a request. */
 async function prepareNext(id, n) {
@@ -52,9 +73,10 @@ const routes = [
 
   ['POST', /^\/api\/w\/demo$/, () => {
     if (!fs.existsSync(DEMO_TEMPLATE)) return fail(404, 'No demo company on this server yet.');
-    const t = JSON.parse(fs.readFileSync(DEMO_TEMPLATE, 'utf8'));
-    delete t.id;
-    return { id: store.create({ ...t, demo: true }).id };
+    const { rev, t } = demoTemplate();
+    const copy = structuredClone(t);
+    delete copy.id;
+    return { id: store.create({ ...copy, demo: true, demo_rev: rev }).id };
   }],
 
   ['GET', /^\/api\/w\/([\w-]+)$/, (_, [id]) => {
